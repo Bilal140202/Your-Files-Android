@@ -20,10 +20,19 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        release {
+            storeFile file('../yourfiles-release.jks')
+            storePassword 'yourfiles123'
+            keyAlias 'yourfiles'
+            keyPassword 'yourfiles123'
+        }
+    }
     buildTypes {
         release {
             minifyEnabled true
             shrinkResources true
+            signingConfig signingConfigs.release
             ndk {
                 debugSymbolLevel 'symbol_table'
             }

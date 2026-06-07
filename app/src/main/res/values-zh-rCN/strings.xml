@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Your Files</string>
-    <string name="google_client_id">7346449985-910if265a4nglccu79q627fo88snqfbd.apps.googleusercontent.com</string>
 
     <!-- Permission -->
     <string name="permission_title">需要存储权限</string>
