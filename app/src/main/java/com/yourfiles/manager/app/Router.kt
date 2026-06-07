@@ -5,6 +5,9 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import com.yourfiles.manager.app.Routes.Companion.FILE_DETAIL_VIEWER
 import com.yourfiles.manager.app.Routes.Companion.FLAT_DUPLICATES_FILE_MANAGER
 import com.yourfiles.manager.app.Routes.Companion.FLAT_IMAGES_FILE_MANAGER
@@ -24,7 +27,7 @@ import com.yourfiles.manager.presentation.ui.pages.FlatLargeFilesManager
 import com.yourfiles.manager.presentation.ui.pages.FlatScreenshotsFileManager
 import com.yourfiles.manager.presentation.ui.pages.FlatVideosFileManager
 import com.yourfiles.manager.presentation.ui.pages.ImageOptimiserPage
-import com.yourfiles.manager.presentation.ui.pages.SettingsPage
+import com.yourfiles.manager.presentation.ui.pages.SettingsScreen
 import com.yourfiles.manager.presentation.ui.pages.TrashPage
 import com.yourfiles.manager.presentation.ui.pages.WhatsAppCleanerPage
 val router: NavGraphBuilder.() -> Unit = {
@@ -56,7 +59,9 @@ val router: NavGraphBuilder.() -> Unit = {
         TrashPage()
     }
     composable(SETTINGS) {
-        SettingsPage()
+        val context = LocalContext.current
+        val navController = remember { (context.applicationContext as App).navController() }
+        SettingsScreen(navController = navController)
     }
     composable(
         "$FILE_DETAIL_VIEWER?url={url}&category={category}&md5={md5}", arguments = listOf(
@@ -88,5 +93,6 @@ interface Routes {
         const val FILE_DETAIL_VIEWER = "/file-detail-viewer"
         const val TRASH = "/trash"
         const val SETTINGS = "/settings"
+        const val PRIVACY_POLICY = "/privacy-policy"
     }
 }

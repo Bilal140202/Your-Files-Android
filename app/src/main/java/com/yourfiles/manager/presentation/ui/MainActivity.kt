@@ -76,8 +76,7 @@ class MainActivity : AppCompatActivity() {
 
             when {
                 !onboardingShown -> {
-                    OnboardingPage(onFinished = {
-                        prefs.edit().putBoolean("onboarding_shown", true).apply()
+                    OnboardingPage(onComplete = {
                         onboardingShownState.value = true
                     })
                 }

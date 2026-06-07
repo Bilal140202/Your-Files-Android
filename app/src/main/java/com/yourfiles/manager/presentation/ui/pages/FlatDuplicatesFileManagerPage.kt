@@ -17,16 +17,16 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoFixHigh
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.outlined.AutoFixHigh
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -42,12 +42,7 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -55,7 +50,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yourfiles.manager.R
 import com.yourfiles.manager.app.itemSpacing
@@ -115,7 +116,10 @@ fun FlatFileManager(vm: FlatDuplicatesFileManagerVM = viewModel()) {
                             Text(if (allGroupsSelected == true) stringResource(R.string.action_deselect_all) else stringResource(R.string.action_select_all))
                         }
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                ),
             )
         },
         bottomBar = {
@@ -132,11 +136,11 @@ fun FlatFileManager(vm: FlatDuplicatesFileManagerVM = viewModel()) {
                         onClick = { vm.autoSelectBest() },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(44.dp),
-                        shape = RoundedCornerShape(12.dp),
+                            .height(48.dp),
+                        shape = RoundedCornerShape(16.dp),
                     ) {
                         Icon(
-                            imageVector = Icons.Default.AutoFixHigh,
+                            imageVector = Icons.Outlined.AutoFixHigh,
                             contentDescription = null,
                             modifier = Modifier.size(18.dp),
                         )
@@ -148,7 +152,7 @@ fun FlatFileManager(vm: FlatDuplicatesFileManagerVM = viewModel()) {
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     // Delete button (sticky bottom)
                     DeleteButtonBottomBar(vm = vm)
@@ -177,14 +181,14 @@ fun DeleteButtonBottomBar(vm: FlatDuplicatesFileManagerVM = viewModel()) {
         enabled = selectedFileIds.value.isNotEmpty() && !isDeleting.value,
         modifier = Modifier
             .fillMaxWidth()
-            .height(48.dp),
-        shape = RoundedCornerShape(12.dp),
+            .height(52.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.error,
         ),
     ) {
         Icon(
-            imageVector = Icons.Default.Delete,
+            imageVector = Icons.Outlined.Delete,
             contentDescription = null,
             modifier = Modifier.size(18.dp),
         )
@@ -317,7 +321,6 @@ private fun DuplicatesShimmer() {
 fun DuplicateGroupCard(
     data: List<LocalFile>, vm: FlatDuplicatesFileManagerVM = viewModel()
 ) {
-    // Card-style grouping instead of plain list
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -325,16 +328,19 @@ fun DuplicateGroupCard(
     ) {
         androidx.compose.material3.Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(28.dp),
             colors = androidx.compose.material3.CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             ),
+            elevation = androidx.compose.material3.CardDefaults.cardElevation(
+                defaultElevation = 0.dp,
+            ),
         ) {
-            Column(modifier = Modifier.padding(top = 12.dp, bottom = 8.dp)) {
+            Column(modifier = Modifier.padding(top = 14.dp, bottom = 10.dp)) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 12.dp, end = 12.dp),
+                        .padding(start = 14.dp, end = 14.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -356,9 +362,9 @@ fun DuplicateGroupCard(
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 LazyRow(
-                    contentPadding = PaddingValues(start = 12.dp, end = 12.dp),
+                    contentPadding = PaddingValues(start = 14.dp, end = 14.dp),
                     horizontalArrangement = Arrangement.spacedBy(itemSpacing),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
