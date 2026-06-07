@@ -41,7 +41,7 @@ class StorageHelper {
                 totalBytes += stat.totalBytes
                 freeBytes += stat.availableBytes
             } catch (e: Exception) {
-                Log.e("YourFiles", e, "Error getting stats for path: $path")
+                Log.e("YourFiles", "Error getting stats for path: $path", e)
                 // If one path fails, continue with others.
             }
         }
@@ -102,7 +102,7 @@ class StorageHelper {
                         pathField.isAccessible = true
                         pathField.get(volume) as? String
                     } catch (e: Exception) {
-                        Log.e("YourFiles", e, "Error getting SD card path via reflection")
+                        Log.e("YourFiles", "Error getting SD card path via reflection", e)
                         null
                     }
                 }
@@ -131,7 +131,7 @@ class StorageHelper {
 
             StorageInfo(totalSpaceGB, usedSpaceGB, freeSpaceGB)
         } catch (e: Exception) {
-            Log.e("YourFiles", e, "Failed to get legacy storage info.")
+            Log.e("YourFiles", "Failed to get legacy storage info.", e)
             StorageInfo(0f, 0f, 0f)
         }
     }

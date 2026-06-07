@@ -29,7 +29,7 @@ open class SelectableDeletableVM : ViewModel() {
         pendingDeleteFiles = ids
     }
 
-    fun confirmDeleteFiles() {
+    open fun confirmDeleteFiles() {
         viewModelScope.launch(Dispatchers.IO) {
             val totalBytes = pendingDeleteFiles.sumOf { File(it).length() }
             withContext(Dispatchers.Main) { isDeleting.value = true }
@@ -71,5 +71,5 @@ open class SelectableDeletableVM : ViewModel() {
         pendingDeleteFiles = emptySet()
     }
 
-    private var pendingDeleteFiles = emptySet<String>()
+    protected var pendingDeleteFiles = emptySet<String>()
 }

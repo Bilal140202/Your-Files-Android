@@ -51,7 +51,7 @@ class UpdateChecksumWorker(context: Context, workerParameters: WorkerParameters)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Log.e("YourFiles", e, "Error processing batch.")
+                Log.e("YourFiles", "Error processing batch.", e)
                 return Result.retry()
             }
         }

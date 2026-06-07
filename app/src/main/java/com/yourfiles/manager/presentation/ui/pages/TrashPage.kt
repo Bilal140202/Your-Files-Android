@@ -73,6 +73,7 @@ fun TrashPage() {
     var showEmptyTrashDialog by remember { mutableStateOf(false) }
     var showRestoreDialog by remember { mutableStateOf<File?>(null) }
     var isRestoring by remember { mutableStateOf(false) }
+    var fileToRestore by remember { mutableStateOf<File?>(null) }
 
     // Load trash files on first composition and after any mutation
     fun reloadTrash() {
@@ -108,26 +109,31 @@ fun TrashPage() {
     }
 
     val confirmRestore: () -> Unit = {
-        val file = showRestoreDialog ?: return
-        isRestoring = true
-        showRestoreDialog = null
+        val file = showRestoreDialog
+        if (file != null) {
+            isRestoring = true
+            showRestoreDialog = null
+            fileToRestore = file
+        }
+    }
 
-        LaunchedEffect(file) {
-            withContext(Dispatchers.IO) {
-                // Build a simple entry mapping using the file's name as a heuristic.
-                // The trash file is named "<timestamp>_<originalName>", so we try to
-                // reconstruct the original path from the trash file name.
-                val originalName = file.name.substringAfter("_", file.name)
-                val restored = TrashManager.undoTrash(mapOf(file.absolutePath to file.absolutePath))
-                if (restored == 0) {
-                    // Fallback: just rename back, best-effort
-                    file.delete()
-                }
+    LaunchedEffect(fileToRestore) {
+        val file = fileToRestore ?: return@LaunchedEffect
+        withContext(Dispatchers.IO) {
+            // Build a simple entry mapping using the file's name as a heuristic.
+            // The trash file is named "<timestamp>_<originalName>", so we try to
+            // reconstruct the original path from the trash file name.
+            val originalName = file.name.substringAfter("_", file.name)
+            val restored = TrashManager.undoTrash(mapOf(file.absolutePath to file.absolutePath))
+            if (restored == 0) {
+                // Fallback: just rename back, best-effort
+                file.delete()
             }
-            withContext(Dispatchers.Main) {
-                isRestoring = false
-                reloadTrash()
-            }
+        }
+        withContext(Dispatchers.Main) {
+            isRestoring = false
+            fileToRestore = null
+            reloadTrash()
         }
     }
 
@@ -141,8 +147,7 @@ fun TrashPage() {
             TopAppBar(
                 title = {
                     Text(
-                        text = try { stringResource(R.string.trash) }
-                            catch (_: Exception) { "Trash" }
+                        text = stringResource(R.string.trash_title)
                     )
                 },
                 navigationIcon = { BackNavigationIconCompose() },

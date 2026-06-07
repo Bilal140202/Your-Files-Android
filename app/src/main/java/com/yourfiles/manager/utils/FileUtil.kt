@@ -46,7 +46,7 @@ fun File.md5(): String? {
         }
         sb.toString()
     } catch (e: IOException) {
-        Log.w("YourFiles", e, "Could not compute md5 for $absolutePath")
+        Log.w("YourFiles", "Could not compute md5 for $absolutePath", e)
         null
     }
 }
@@ -95,7 +95,7 @@ fun File.partialMd5(bytesFromEachEnd: Int = 4096): String? {
         }
         "${sb}_$fileSize"
     } catch (e: IOException) {
-        Log.w("YourFiles", e, "Could not compute partial md5 for $absolutePath")
+        Log.w("YourFiles", "Could not compute partial md5 for $absolutePath", e)
         null
     }
 }

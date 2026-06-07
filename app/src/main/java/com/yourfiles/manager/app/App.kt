@@ -15,6 +15,9 @@ import com.yourfiles.manager.data.db.AppDatabase
 import com.yourfiles.manager.utils.SavedMemoryTracker
 import com.yourfiles.manager.utils.TrashManager
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 
 class App : Application() {
@@ -40,8 +43,10 @@ class App : Application() {
         initDB()
         initLibraries()
         SavedMemoryTracker.initialize()
-        // Clean up old trash on app start
-        TrashManager.cleanupOldTrash(applicationContext)
+        // Clean up old trash on app start (fire and forget)
+        CoroutineScope(Dispatchers.IO).launch {
+            TrashManager.cleanupOldTrash(applicationContext)
+        }
     }
 
     private fun initDB() {
@@ -58,12 +63,6 @@ class App : Application() {
             }.crossfade(true).build()
     }
 
-    fun log(tag: String, message: String) {
-        if (BuildConfig.DEBUG) {
-            Log.d(tag, message)
-        }
-    }
-
     companion object {
         lateinit var instance: App
             private set
@@ -77,7 +76,7 @@ fun YourFilesApp(
     modifier: Modifier = Modifier,
     startDestination: String = Routes.HOME,
 ) {
-    AppTheme {
+    com.yourfiles.manager.app.uim3.theme.AppTheme {
         NavHost(
             modifier = modifier,
             navController = App.instance.navController(),

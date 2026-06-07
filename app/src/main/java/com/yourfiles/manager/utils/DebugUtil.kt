@@ -13,7 +13,7 @@ fun LogCompositions(tag: String = COMPOSITION_TAG, msg: String) {
     if (BuildConfig.DEBUG) {
         val ref = remember { Ref(0) }
         SideEffect { ref.value++ }
-        Timber.tag(tag).e("Compositions: $msg ${ref.value}")
+        Log.d("YourFiles", "$tag: Compositions: $msg ${ref.value}")
     }
 }
 

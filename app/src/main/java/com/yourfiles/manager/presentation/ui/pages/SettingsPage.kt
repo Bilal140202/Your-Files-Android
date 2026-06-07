@@ -68,8 +68,7 @@ fun SettingsPage() {
             TopAppBar(
                 title = {
                     Text(
-                        text = try { stringResource(R.string.settings) }
-                            catch (_: Exception) { "Settings" }
+                        text = stringResource(R.string.settings_title)
                     )
                 },
                 navigationIcon = { BackNavigationIconCompose() }

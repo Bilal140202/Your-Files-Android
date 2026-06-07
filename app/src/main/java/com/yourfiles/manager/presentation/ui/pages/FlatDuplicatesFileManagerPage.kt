@@ -82,12 +82,16 @@ fun FlatFileManager(vm: FlatDuplicatesFileManagerVM = viewModel()) {
         filesExceptFirst.all { file -> vm.selectedFileIds.value.contains(file.id) }
     }
 
+    val context = LocalContext.current
+    val trashMsg = context.getString(R.string.trash_deleted_moved)
+    val undoLabel = context.getString(R.string.trash_undo)
+
     // Handle undo snackbar
     LaunchedEffect(vm.showUndoSnackbar.value) {
         if (vm.showUndoSnackbar.value) {
             val result = snackbarHostState.showSnackbar(
-                message = stringResource(R.string.trash_deleted_moved),
-                actionLabel = stringResource(R.string.trash_undo),
+                message = trashMsg,
+                actionLabel = undoLabel,
                 duration = SnackbarDuration.Short,
             )
             when (result) {

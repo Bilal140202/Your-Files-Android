@@ -41,7 +41,7 @@ object ImageOptimizer {
             tempFile.delete()
             0L
         } catch (e: Exception) {
-            Log.e("YourFiles", e, "Failed to optimize $filePath")
+            Log.e("YourFiles", "Failed to optimize $filePath", e)
             tempFile.delete()
             0L
         }
@@ -53,7 +53,7 @@ object ImageOptimizer {
             exif.setAttribute(ExifInterface.TAG_USER_COMMENT, EXIF_MARKER)
             exif.saveAttributes()
         } catch (e: Exception) {
-            Log.w("YourFiles", e, "Failed to write optimised marker to $filePath")
+            Log.w("YourFiles", "Failed to write optimised marker to $filePath", e)
         }
     }
 

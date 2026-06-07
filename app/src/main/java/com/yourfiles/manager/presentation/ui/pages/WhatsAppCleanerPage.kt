@@ -76,7 +76,7 @@ import java.io.File
 
 private const val WHATSAPP_MEDIA_BASE = "/storage/emulated/0/WhatsApp/WhatsApp Media"
 
-private enum class WhatsAppCategory(
+public enum class WhatsAppCategory(
     val label: String,
     val icon: ImageVector,
     val relativePath: String,
@@ -125,7 +125,7 @@ class WhatsAppCleanerVM : SelectableDeletableVM() {
     var activeCategory by mutableStateOf(WhatsAppCategory.IMAGES)
         private set
 
-    fun setActiveCategory(category: WhatsAppCategory) {
+    fun selectCategory(category: WhatsAppCategory) {
         activeCategory = category
     }
 
@@ -351,7 +351,7 @@ fun WhatsAppCleanerPage(vm: WhatsAppCleanerVM = viewModel()) {
                         CategoryChipRow(
                             allFiles = allFiles,
                             activeCategory = vm.activeCategory,
-                            onCategorySelected = vm::setActiveCategory,
+                            onCategorySelected = vm::selectCategory,
                         )
 
                         // ── File grid ─────────────────────────────────────────
@@ -414,7 +414,7 @@ private fun CategoryChipRow(
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
                             tint = if (isSelected)
-                                FilterChipDefaults.selectedIconColor
+                                MaterialTheme.colorScheme.primary
                             else
                                 MaterialTheme.colorScheme.onSurfaceVariant,
                         )
