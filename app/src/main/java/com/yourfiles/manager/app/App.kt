@@ -5,7 +5,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
 import androidx.room.Room
 import coil3.ImageLoader
 import coil3.request.CachePolicy
@@ -14,7 +13,6 @@ import coil3.video.VideoFrameDecoder
 import com.yourfiles.manager.data.db.AppDatabase
 import com.yourfiles.manager.utils.SavedMemoryTracker
 import com.yourfiles.manager.utils.TrashManager
-import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -70,18 +68,19 @@ class App : Application() {
 }
 
 
+/**
+ * Root composable for the app.
+ *
+ * Wraps everything in the M3 theme, then delegates entirely to
+ * [IndianFileRouter] which owns the Scaffold, bottom navigation bar,
+ * and NavHost for the Indian edition.
+ */
 @ExperimentalFoundationApi
 @Composable
 fun YourFilesApp(
     modifier: Modifier = Modifier,
-    startDestination: String = Routes.HOME,
 ) {
     com.yourfiles.manager.app.uim3.theme.AppTheme {
-        NavHost(
-            modifier = modifier,
-            navController = App.instance.navController(),
-            startDestination = startDestination,
-            builder = router
-        )
+        IndianFileRouter(modifier = modifier)
     }
 }

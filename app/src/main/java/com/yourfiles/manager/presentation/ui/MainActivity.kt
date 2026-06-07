@@ -91,7 +91,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 else -> {
                     App.instance.initNavController(rememberNavController())
-                    YourFilesApp(startDestination = com.yourfiles.manager.app.Routes.HOME)
+                    YourFilesApp()
                 }
             }
         }

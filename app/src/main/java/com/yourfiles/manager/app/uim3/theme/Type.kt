@@ -9,130 +9,145 @@ import androidx.compose.ui.text.googlefonts.GoogleFont
 import androidx.compose.ui.unit.sp
 import com.yourfiles.manager.R
 
+/*
+ * Indian edition typography — Noto Sans
+ *
+ * Noto Sans provides comprehensive Devanagari coverage for Hindi and
+ * excellent support for all major Indian scripts (Bengali, Tamil, Telugu,
+ * Marathi, Gujarati, Kannada, Malayalam, Punjabi, Odia, Assamese).
+ *
+ * Four downloadable weights are registered with Google Fonts:
+ *   Normal (400), Medium (500), SemiBold (600), Bold (700)
+ */
+
 private val provider = GoogleFont.Provider(
     providerAuthority = "com.google.android.gms.fonts",
     providerPackage = "com.google.android.gms",
     certificates = R.array.com_google_android_gms_fonts_certs
 )
 
-private val ArimoFont = GoogleFont("Arimo")
+private val NotoSansFont = GoogleFont("Noto Sans")
 
-val ArimoFontFamily = FontFamily(
-    Font(googleFont = ArimoFont, fontProvider = provider, weight = FontWeight.Normal),
-    Font(googleFont = ArimoFont, fontProvider = provider, weight = FontWeight.Medium),
-    Font(googleFont = ArimoFont, fontProvider = provider, weight = FontWeight.SemiBold),
-    Font(googleFont = ArimoFont, fontProvider = provider, weight = FontWeight.Bold),
+val NotoSansFamily = FontFamily(
+    Font(googleFont = NotoSansFont, fontProvider = provider, weight = FontWeight.Normal),
+    Font(googleFont = NotoSansFont, fontProvider = provider, weight = FontWeight.Medium),
+    Font(googleFont = NotoSansFont, fontProvider = provider, weight = FontWeight.SemiBold),
+    Font(googleFont = NotoSansFont, fontProvider = provider, weight = FontWeight.Bold),
 )
 
 val AppTypography = Typography(
-    // Display — large stat numbers (e.g. 4.7 GB hero)
+    // ── Display — hero numbers and large emphasis ──────────────────────────
     displayLarge = TextStyle(
-        fontFamily = ArimoFontFamily,
+        fontFamily = NotoSansFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 57.sp,
         lineHeight = 64.sp,
-        letterSpacing = (-0.25).sp
+        letterSpacing = (-0.25).sp,
     ),
     displayMedium = TextStyle(
-        fontFamily = ArimoFontFamily,
+        fontFamily = NotoSansFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 45.sp,
         lineHeight = 52.sp,
-        letterSpacing = 0.sp
+        letterSpacing = 0.sp,
     ),
     displaySmall = TextStyle(
-        fontFamily = ArimoFontFamily,
+        fontFamily = NotoSansFamily,
         fontWeight = FontWeight.Bold,
-        fontSize = 36.sp,        // "4.7 GB" hero stat
+        fontSize = 36.sp,
         lineHeight = 44.sp,
-        letterSpacing = 0.sp
+        letterSpacing = 0.sp,
     ),
-    // Headline — screen titles and section headers
+
+    // ── Headline — screen titles and section headers ──────────────────────
     headlineLarge = TextStyle(
-        fontFamily = ArimoFontFamily,
+        fontFamily = NotoSansFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 32.sp,
         lineHeight = 40.sp,
-        letterSpacing = 0.sp
+        letterSpacing = 0.sp,
     ),
     headlineMedium = TextStyle(
-        fontFamily = ArimoFontFamily,
+        fontFamily = NotoSansFamily,
         fontWeight = FontWeight.Bold,
-        fontSize = 28.sp,        // "Great Job!", "Scan Complete"
+        fontSize = 28.sp,
         lineHeight = 36.sp,
-        letterSpacing = 0.sp
+        letterSpacing = 0.sp,
     ),
     headlineSmall = TextStyle(
-        fontFamily = ArimoFontFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 24.sp,        // "Analyzing Storage"
+        fontFamily = NotoSansFamily,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 24.sp,
         lineHeight = 32.sp,
-        letterSpacing = 0.sp
+        letterSpacing = 0.sp,
     ),
-    // Title — card headers and category names
+
+    // ── Title — card headers and category labels ──────────────────────────
     titleLarge = TextStyle(
-        fontFamily = ArimoFontFamily,
-        fontWeight = FontWeight.Bold,
+        fontFamily = NotoSansFamily,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 22.sp,
         lineHeight = 28.sp,
-        letterSpacing = 0.sp
+        letterSpacing = 0.sp,
     ),
     titleMedium = TextStyle(
-        fontFamily = ArimoFontFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 18.sp,        // "Found So Far", "Categories"
+        fontFamily = NotoSansFamily,
+        fontWeight = FontWeight.Medium,
+        fontSize = 18.sp,
         lineHeight = 24.sp,
-        letterSpacing = 0.15.sp
+        letterSpacing = 0.15.sp,
     ),
     titleSmall = TextStyle(
-        fontFamily = ArimoFontFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 14.sp,        // category item titles (e.g. "Duplicate Photos")
+        fontFamily = NotoSansFamily,
+        fontWeight = FontWeight.Medium,
+        fontSize = 14.sp,
         lineHeight = 20.sp,
-        letterSpacing = 0.1.sp
+        letterSpacing = 0.1.sp,
     ),
-    // Body — descriptive and secondary text
+
+    // ── Body — primary reading text ───────────────────────────────────────
     bodyLarge = TextStyle(
-        fontFamily = ArimoFontFamily,
+        fontFamily = NotoSansFamily,
         fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,        // "Scanning your device..."
+        fontSize = 16.sp,
         lineHeight = 24.sp,
-        letterSpacing = 0.5.sp
+        letterSpacing = 0.5.sp,
     ),
     bodyMedium = TextStyle(
-        fontFamily = ArimoFontFamily,
+        fontFamily = NotoSansFamily,
         fontWeight = FontWeight.Normal,
-        fontSize = 14.sp,        // "Finding unnecessary files...", file counts
+        fontSize = 14.sp,
         lineHeight = 20.sp,
-        letterSpacing = 0.25.sp
+        letterSpacing = 0.25.sp,
     ),
     bodySmall = TextStyle(
-        fontFamily = ArimoFontFamily,
-        fontWeight = FontWeight.Normal,
-        fontSize = 12.sp,        // secondary labels (e.g. "Duplicates", "Screenshots")
-        lineHeight = 16.sp,
-        letterSpacing = 0.4.sp
-    ),
-    // Label — buttons and chips
-    labelLarge = TextStyle(
-        fontFamily = ArimoFontFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 16.sp,        // "Back to Home", "Clean More Files", "Review & Clean"
-        lineHeight = 20.sp,
-        letterSpacing = 0.1.sp
-    ),
-    labelMedium = TextStyle(
-        fontFamily = ArimoFontFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 14.sp,        // "Start Cleaning"
-        lineHeight = 16.sp,
-        letterSpacing = 0.5.sp
-    ),
-    labelSmall = TextStyle(
-        fontFamily = ArimoFontFamily,
+        fontFamily = NotoSansFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 12.sp,
         lineHeight = 16.sp,
-        letterSpacing = 0.5.sp
+        letterSpacing = 0.4.sp,
+    ),
+
+    // ── Label — buttons, chips, and badges ────────────────────────────────
+    labelLarge = TextStyle(
+        fontFamily = NotoSansFamily,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 16.sp,
+        lineHeight = 20.sp,
+        letterSpacing = 0.1.sp,
+    ),
+    labelMedium = TextStyle(
+        fontFamily = NotoSansFamily,
+        fontWeight = FontWeight.Medium,
+        fontSize = 14.sp,
+        lineHeight = 16.sp,
+        letterSpacing = 0.5.sp,
+    ),
+    labelSmall = TextStyle(
+        fontFamily = NotoSansFamily,
+        fontWeight = FontWeight.Normal,
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        letterSpacing = 0.5.sp,
     ),
 )
