@@ -6,7 +6,7 @@ import android.os.ParcelFileDescriptor
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.transformable
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -44,18 +43,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.positionChanged
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.math.max
-import kotlin.math.min
 
 /**
  * Native in-app PDF viewer using Android's PdfRenderer.
@@ -64,7 +58,8 @@ import kotlin.math.min
  * Features:
  *  - Renders pages via PdfRenderer on background threads
  *  - HorizontalPager for swipe navigation between pages
- *  - Pinch-to-zoom and pan support
+ *  - Pinch-to-zoom and pan support (built-in detectTransformGestures)
+ *  - Double-tap to reset zoom
  *  - Bottom bar: prev/next buttons + page indicator
  *  - Page cache (prev/current/next) for smooth swiping
  *  - Large PDF loading indicator (>10 MB)
@@ -99,34 +94,34 @@ fun PdfViewerScreen(
 
     // Open PdfRenderer and get page count
     DisposableEffect(filePath) {
+        var pfd: ParcelFileDescriptor? = null
+        var renderer: PdfRenderer? = null
+
         if (!fileExists) {
             loading = false
             loadError = "File not found"
-            onDispose { }
-            return@DisposableEffect
+        } else {
+            try {
+                pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+                renderer = PdfRenderer(pfd)
+                pageCount = renderer.pageCount
+                loading = false
+            } catch (e: Exception) {
+                loading = false
+                loadError = "Failed to open PDF: ${e.localizedMessage}"
+            }
         }
 
-        try {
-            val pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
-            val renderer = PdfRenderer(pfd)
-            pageCount = renderer.pageCount
-            loading = false
-
-            onDispose {
-                // Cancel all pending render jobs
-                renderJobs.values.forEach { it.cancel() }
-                renderJobs.clear()
-                // Close all cached bitmaps
-                pageCache.values.forEach { if (!it.isRecycled) it.recycle() }
-                pageCache.clear()
-                // Close renderer
-                renderer.close()
-                pfd.close()
-            }
-        } catch (e: Exception) {
-            loading = false
-            loadError = "Failed to open PDF: ${e.localizedMessage}"
-            onDispose { }
+        onDispose {
+            // Cancel all pending render jobs
+            renderJobs.values.forEach { it.cancel() }
+            renderJobs.clear()
+            // Close all cached bitmaps
+            pageCache.values.forEach { if (!it.isRecycled) it.recycle() }
+            pageCache.clear()
+            // Close renderer
+            renderer?.close()
+            pfd?.close()
         }
     }
 
@@ -223,12 +218,16 @@ fun PdfViewerScreen(
                         totalPages = pageCount,
                         onPrev = {
                             if (pagerState.currentPage > 0) {
-                                coroutineScope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                                }
                             }
                         },
                         onNext = {
                             if (pagerState.currentPage < pageCount - 1) {
-                                coroutineScope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                                }
                             }
                         },
                     )
@@ -241,6 +240,7 @@ fun PdfViewerScreen(
 /**
  * Renders a single PDF page to a Bitmap on IO thread.
  * Uses a reasonable max dimension to avoid OOM on large pages.
+ * Each call opens/closes its own PdfRenderer — safe for parallel invocation.
  */
 private fun renderPage(file: File, pageIndex: Int): Bitmap? {
     return try {
@@ -270,8 +270,10 @@ private fun renderPage(file: File, pageIndex: Int): Bitmap? {
 
 /**
  * Displays a single PDF page bitmap with zoom & pan support.
- * Pinch-to-zoom + drag to pan, double-tap to reset.
+ * Uses Compose's built-in detectTransformGestures for pinch-to-zoom.
+ * Double-tap resets zoom to 1x.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PdfPageView(
     pageIndex: Int,
@@ -295,7 +297,7 @@ private fun PdfPageView(
 
     val imageBitmap = remember(bitmap) { bitmap.asImageBitmap() }
 
-    // Zoom state
+    // Zoom & pan state
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
 
@@ -313,14 +315,14 @@ private fun PdfPageView(
                 )
             }
             .pointerInput(Unit) {
-                detectTransformGestures { centroid, pan, zoomChange ->
+                detectTransformGestures { _, panChange, zoomChange, _ ->
                     val newScale = (scale * zoomChange).coerceIn(1f, 5f)
-                    // Calculate pan with zoom anchoring
+                    // Calculate pan bounds based on current zoom
                     val maxX = (size.width * (newScale - 1)) / 2f
                     val maxY = (size.height * (newScale - 1)) / 2f
                     offset = Offset(
-                        x = (offset.x + pan.x * newScale).coerceIn(-maxX, maxX),
-                        y = (offset.y + pan.y * newScale).coerceIn(-maxY, maxY),
+                        x = (offset.x + panChange.x).coerceIn(-maxX, maxX),
+                        y = (offset.y + panChange.y).coerceIn(-maxY, maxY),
                     )
                     scale = newScale
                 }
@@ -342,63 +344,8 @@ private fun PdfPageView(
 }
 
 /**
- * Detect transform gestures (pan + zoom) for pinch-to-zoom support.
- * A simpler Compose-friendly version without external library dependencies.
- */
-private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.detectTransformGestures(
-    panZoomLock: Boolean = false,
-    onGesture: (centroid: Offset, pan: Offset, zoom: Float) -> Unit,
-) {
-    awaitPointerEventScope {
-        var zoom = 1f
-        var pan = Offset.Zero
-        var pastTouchSlop = false
-        var touchSlop = viewConfig.touchSlop
-
-        val firstDown = awaitFirstDown(requireUnconsumed = false)
-
-        // Touch slop detection for deciding between pan and zoom
-        var isZooming = false
-
-        do {
-            val event = awaitPointerEvent()
-            val zoomChanged = event.calculateZoom()
-            val panChanged = event.calculatePan()
-
-            if (!pastTouchSlop) {
-                val slopX = if (panZoomLock) 0f else touchSlop
-                val slopY = if (panZoomLock) 0f else touchSlop
-                val zoomSlop = touchSlop * 0.25f
-
-                val hasZoom = kotlin.math.abs(zoomChanged - 1f) > zoomSlop
-                val hasPan = kotlin.math.abs(panChanged.x) > slopX || kotlin.math.abs(panChanged.y) > slopY
-
-                if (hasZoom) isZooming = true
-
-                if (hasZoom || hasPan) {
-                    pastTouchSlop = true
-                    touchSlop *= 0.5f
-                }
-            }
-
-            if (pastTouchSlop) {
-                val centroid = event.calculateCentroid()
-                if (isZooming) {
-                    zoom *= zoomChanged
-                }
-                pan += Offset(
-                    if (!isZooming || panZoomLock) panChanged.x else 0f,
-                    if (!isZooming || panZoomLock) panChanged.y else 0f,
-                )
-                onGesture(centroid, pan, zoom)
-            }
-        } while (event.changes.any { it.pressed })
-    }
-}
-
-/**
  * Bottom navigation bar for PDF pages: prev/next buttons + page indicator.
- * ES-style: minimal, clean, functional.
+ * ES-style: minimal, clean, functional. Light gray background.
  */
 @Composable
 private fun PdfBottomNavBar(
