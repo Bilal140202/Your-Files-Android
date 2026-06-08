@@ -84,11 +84,9 @@ fun FileBrowserScreen(
     // Scroll position preserved per path via a map of remembered states
     val scrollState = rememberLazyListState()
 
-    // Navigate to initial path only once on first composition
+    // Only apply nav argument on very first launch — never override SavedStateHandle
     LaunchedEffect(Unit) {
-        if (initialPath != null) {
-            viewModel.navigateTo(initialPath)
-        }
+        viewModel.initWithNavPath(initialPath)
     }
 
     // When currentPath changes (folder navigation), reset scroll to top
@@ -151,6 +149,7 @@ fun FileBrowserScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface, // opaque bg — prevent ghost overlay
         topBar = {
             TopAppBar(
                 title = {
@@ -310,7 +309,8 @@ fun FileBrowserScreen(
                             } else if (item.isDirectory) {
                                 viewModel.navigateTo(item.path)
                             } else {
-                                // Navigate to file viewer — no special flags, keeps Explorer in back stack
+                                // Navigate to file viewer — plain navigate, no flags, keep Explorer in back stack
+                                // Do NOT use CLEAR_TOP, NEW_TASK, or SINGLE_TOP
                                 App.instance.navController().navigate(
                                     "${Routes.FILE_DETAIL_VIEWER}?url=${android.net.Uri.encode(item.path)}&category=file"
                                 )

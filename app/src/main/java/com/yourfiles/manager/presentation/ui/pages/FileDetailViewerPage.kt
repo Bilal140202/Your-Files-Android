@@ -164,6 +164,7 @@ fun FileDetailViewerCompose(
     }
 
     Scaffold(
+        containerColor = Color.Black, // opaque black bg — prevent ghost overlay
         topBar = {
             TopAppBar(
                 title = { Text(currentFile?.fileName ?: "", fontSize = 14.sp) },

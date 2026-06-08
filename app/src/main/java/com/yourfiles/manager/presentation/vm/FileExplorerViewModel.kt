@@ -4,6 +4,7 @@ import android.app.Application
 import android.os.Environment
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.yourfiles.manager.domain.model.FileItem
 import kotlinx.coroutines.Dispatchers
@@ -24,18 +25,44 @@ data class ExplorerState(
     val isMultiSelectMode: Boolean = false,
 )
 
-class FileExplorerViewModel(app: Application) : AndroidViewModel(app) {
+class FileExplorerViewModel(
+    app: Application,
+    private val savedStateHandle: SavedStateHandle,
+) : AndroidViewModel(app) {
 
     private val _state = MutableStateFlow(ExplorerState())
     val state: StateFlow<ExplorerState> = _state
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    private val rootPath = Environment.getExternalStorageDirectory().absolutePath
 
-    init {
-        navigateTo(Environment.getExternalStorageDirectory().absolutePath)
+    companion object {
+        private const val KEY_CURRENT_PATH = "current_path"
     }
 
-    fun navigateTo(path: String) {
+    init {
+        // Restore saved path from SavedStateHandle — survives ViewModel recreation
+        val savedPath = savedStateHandle.get<String>(KEY_CURRENT_PATH)
+        val startPath = savedPath ?: rootPath
+        navigateTo(startPath, saveState = false) // don't double-save on init
+        if (savedPath != null) {
+            savedStateHandle[KEY_CURRENT_PATH] = savedPath
+        }
+    }
+
+    /**
+     * Called from FileBrowserScreen with the nav argument path.
+     * Only applies if ViewModel has no saved path (first launch).
+     */
+    fun initWithNavPath(navPath: String?) {
+        val savedPath = savedStateHandle.get<String>(KEY_CURRENT_PATH)
+        if (savedPath == null && navPath != null) {
+            navigateTo(navPath)
+        }
+        // If savedPath exists, ViewModel already restored it — ignore nav argument
+    }
+
+    fun navigateTo(path: String, saveState: Boolean = true) {
         _state.value = _state.value.copy(
             currentPath = path,
             isLoading = true,
@@ -43,6 +70,9 @@ class FileExplorerViewModel(app: Application) : AndroidViewModel(app) {
             selectedItems = emptySet(),
             isMultiSelectMode = false,
         )
+        if (saveState) {
+            savedStateHandle[KEY_CURRENT_PATH] = path
+        }
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val dir = File(path)
@@ -85,16 +115,14 @@ class FileExplorerViewModel(app: Application) : AndroidViewModel(app) {
 
     fun isAtRoot(): Boolean {
         val current = _state.value.currentPath
-        val root = Environment.getExternalStorageDirectory().absolutePath
-        return current == root || current.isEmpty()
+        return current == rootPath || current.isEmpty()
     }
 
     fun navigateUp(): Boolean {
         if (isAtRoot()) return false
         val current = File(_state.value.currentPath)
         val parent = current.parentFile ?: return false
-        if (parent.absolutePath == Environment.getExternalStorageDirectory().absolutePath ||
-            parent.canRead()) {
+        if (parent.absolutePath == rootPath || parent.canRead()) {
             navigateTo(parent.absolutePath)
             return true
         }
@@ -151,16 +179,15 @@ class FileExplorerViewModel(app: Application) : AndroidViewModel(app) {
     fun getBreadcrumbSegments(): List<Pair<String, String>> {
         val fullPath = _state.value.currentPath
         val segments = mutableListOf<Pair<String, String>>()
-        val root = Environment.getExternalStorageDirectory().absolutePath
         var current = fullPath
         val parts = mutableListOf<String>()
 
-        while (current.isNotEmpty() && current != root && current != "/") {
+        while (current.isNotEmpty() && current != rootPath && current != "/") {
             val file = File(current)
             parts.add(0, file.name)
             val parent = file.parentFile ?: break
             current = parent.absolutePath
-            if (current == root) {
+            if (current == rootPath) {
                 parts.add(0, "Internal Storage")
                 break
             }
@@ -169,8 +196,8 @@ class FileExplorerViewModel(app: Application) : AndroidViewModel(app) {
             parts.add("Internal Storage")
         }
 
-        var buildPath = root
-        segments.add("Internal Storage" to root)
+        var buildPath = rootPath
+        segments.add("Internal Storage" to rootPath)
         for (i in 1 until parts.size) {
             buildPath = File(buildPath, parts[i]).absolutePath
             segments.add(parts[i] to buildPath)

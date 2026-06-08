@@ -10,6 +10,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
+import androidx.navigation.NavOptions
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
 import androidx.room.Room
 import coil3.ImageLoader
 import coil3.request.CachePolicy
@@ -94,6 +98,11 @@ fun YourFilesApp(
                 modifier = modifier,
                 navController = App.instance.navController(),
                 startDestination = startDestination,
+                // ZERO transitions — prevent ghost overlay and flash on back navigation
+                enterTransition = { EnterTransition.None },
+                exitTransition = { ExitTransition.None },
+                popEnterTransition = { EnterTransition.None },
+                popExitTransition = { ExitTransition.None },
                 builder = buildAppGraph(drawerState, scope)
             )
         }
