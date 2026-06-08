@@ -56,6 +56,7 @@ import com.yourfiles.manager.presentation.ui.components.common.thumbnail.OtherFi
 import com.yourfiles.manager.presentation.vm.FileDetailViewerVM
 import com.yourfiles.manager.utils.getMimeType
 import com.yourfiles.manager.utils.isFileArchive
+import com.yourfiles.manager.utils.isFileAudio
 import com.yourfiles.manager.utils.isFileCode
 import com.yourfiles.manager.utils.isFileImage
 import com.yourfiles.manager.utils.isFileText
@@ -230,7 +231,7 @@ fun FileDetailViewerCompose(
                     contentAlignment = Alignment.Center,
                 ) {
                     // ── Universal file type dispatcher ──
-                    // ES principle: images/video/text in-app, everything else → system
+                    // ES principle: images/video/text/audio in-app, APK→installer, rest→system
                     val mime = file.fileType
                     val filePath = file.id
                     when {
@@ -244,12 +245,15 @@ fun FileDetailViewerCompose(
                         isFileText(mime) || isFileCode(filePath) ->
                             TextViewerScreen(filePath = filePath)
 
+                        // AUDIO — in-app player with ExoPlayer
+                        isFileAudio(mime) -> AudioPlayerScreen(filePath = filePath)
+
                         // ZIP archives — in-app browser showing contents
                         isFileArchive(mime) && isZipFile(filePath) ->
                             ZipBrowserScreen(filePath = filePath)
 
-                        // APK — direct system installer (no info page)
-                        mime == "application/vnd.android.package-archive" -> {
+                        // APK — direct system installer (check MIME + extension fallback)
+                        mime == "application/vnd.android.package-archive" || isApkFile(filePath) -> {
                             LaunchedEffect(filePath) {
                                 launchApkInstaller(context, filePath)
                             }
@@ -354,4 +358,11 @@ private fun isZipFile(filePath: String): Boolean {
     val dotIndex = filePath.lastIndexOf('.')
     if (dotIndex < 0) return false
     return filePath.substring(dotIndex + 1).lowercase() == "zip"
+}
+
+/** Check if file is an APK by extension (fallback when MIME type is null). */
+private fun isApkFile(filePath: String): Boolean {
+    val dotIndex = filePath.lastIndexOf('.')
+    if (dotIndex < 0) return false
+    return filePath.substring(dotIndex + 1).lowercase() == "apk"
 }

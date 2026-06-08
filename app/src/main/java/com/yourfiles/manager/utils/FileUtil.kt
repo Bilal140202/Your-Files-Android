@@ -20,7 +20,12 @@ fun File.readIsOptimised(): Boolean {
 }
 
 fun getMimeType(path: String): String? {
-    val ext = MimeTypeMap.getFileExtensionFromUrl(path).lowercase()
+    // MimeTypeMap.getFileExtensionFromUrl fails on filenames with spaces/parentheses
+    // Use File.extension as reliable fallback
+    val ext = MimeTypeMap.getFileExtensionFromUrl(path).lowercase().ifEmpty {
+        File(path).extension.lowercase()
+    }
+    if (ext.isEmpty()) return null
     // Android's MimeTypeMap misses many common types — handle explicitly
     return when (ext) {
         "yaml", "yml" -> "text/yaml"
