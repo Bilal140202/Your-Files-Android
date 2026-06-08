@@ -3,10 +3,8 @@ package com.yourfiles.manager.presentation.ui.pages
 import android.os.Environment
 import android.os.StatFs
 import android.text.format.Formatter
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,9 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -44,7 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,9 +50,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.yourfiles.manager.app.App
 import com.yourfiles.manager.app.Routes
-import android.net.Uri
+import com.yourfiles.manager.utils.StorageHelper
 
 private data class CategoryItem(
     val label: String,
@@ -92,7 +86,7 @@ fun ESHomeScreen(
 
     val tools = listOf(
         ToolItem("Cleaner", Icons.Outlined.CleaningServices, Routes.FLAT_DUPLICATES_FILE_MANAGER),
-        ToolItem("Analyzer", Icons.Outlined.Analytics, Routes.HOME),
+        ToolItem("Analyzer", Icons.Outlined.Analytics, Routes.ANALYZER),
         ToolItem("Optimise", Icons.Outlined.PhotoSizeSelectLarge, Routes.OPTIMISE_IMAGES),
         ToolItem("Recycle Bin", Icons.Outlined.DeleteOutline, Routes.TRASH),
     )
@@ -247,6 +241,91 @@ fun ESHomeScreen(
             }
 
             Spacer(modifier = Modifier.height(8.dp))
+
+            // ── SD Card (if mounted) ──────────────────────────────────────
+            val storageHelper = remember { StorageHelper() }
+            val sdCardPaths = remember {
+                val allPaths = storageHelper.getStoragePaths(context)
+                val internal = Environment.getExternalStorageDirectory().absolutePath
+                allPaths.filter { it != internal }
+            }
+
+            if (sdCardPaths.isNotEmpty()) {
+                sdCardPaths.forEach { sdPath ->
+                    val sdFile = java.io.File(sdPath)
+                    val sdStat = remember(sdPath) { StatFs(sdPath) }
+                    val sdTotal = sdStat.totalBytes
+                    val sdFree = sdStat.availableBytes
+                    val sdUsed = sdTotal - sdFree
+                    val sdUsedPercent = if (sdTotal > 0) (sdUsed * 100 / sdTotal).toInt() else 0
+
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                            .clickable { onNavigateToExplorer(sdPath) },
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.SdStorage,
+                                    contentDescription = null,
+                                    tint = Color(0xFF4CAF50),
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = "SD Card",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "${sdUsedPercent}% used",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(8.dp),
+                                shape = RoundedCornerShape(4.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                            ) {
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth(sdUsedPercent / 100f)
+                                        .height(8.dp),
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = Color(0xFF4CAF50),
+                                ) {}
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Text(
+                                    text = "${Formatter.formatShortFileSize(context, sdUsed)} used",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Text(
+                                    text = "${Formatter.formatShortFileSize(context, sdFree)} free",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
 
             // ── Quick Access (Internal Storage shortcut) ─────────────────────
             Surface(

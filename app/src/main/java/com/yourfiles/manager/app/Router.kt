@@ -28,6 +28,7 @@ import com.yourfiles.manager.presentation.ui.pages.FlatScreenshotsFileManager
 import com.yourfiles.manager.presentation.ui.pages.FlatVideosFileManager
 import com.yourfiles.manager.presentation.ui.pages.ImageOptimiserPage
 import com.yourfiles.manager.presentation.ui.pages.SettingsPage
+import com.yourfiles.manager.presentation.ui.pages.StorageAnalyzerScreen
 import com.yourfiles.manager.presentation.ui.pages.TrashPage
 import com.yourfiles.manager.presentation.ui.pages.WhatsAppCleanerPage
 import com.yourfiles.manager.presentation.ui.pages.FileDetailViewerCompose
@@ -93,6 +94,13 @@ fun buildAppGraph(
     composable(TRASH) {
         TrashPage()
     }
+    composable(Routes.ANALYZER) {
+        StorageAnalyzerScreen(
+            onNavigateToExplorer = { path ->
+                App.instance.navController().navigate("${EXPLORER}?path=${Uri.encode(path)}")
+            }
+        )
+    }
     composable(SETTINGS) {
         SettingsPage()
     }
@@ -129,5 +137,6 @@ interface Routes {
         const val FILE_DETAIL_VIEWER = "/file-detail-viewer"
         const val TRASH = "/trash"
         const val SETTINGS = "/settings"
+        const val ANALYZER = "/analyzer"
     }
 }
