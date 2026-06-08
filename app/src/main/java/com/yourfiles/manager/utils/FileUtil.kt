@@ -20,8 +20,46 @@ fun File.readIsOptimised(): Boolean {
 }
 
 fun getMimeType(path: String): String? {
-    val extension = MimeTypeMap.getFileExtensionFromUrl(path)
-    return MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
+    val ext = MimeTypeMap.getFileExtensionFromUrl(path).lowercase()
+    // Android's MimeTypeMap misses many common types — handle explicitly
+    return when (ext) {
+        "yaml", "yml" -> "text/yaml"
+        "md" -> "text/markdown"
+        "json" -> "application/json"
+        "xml" -> "text/xml"
+        "csv" -> "text/csv"
+        "log" -> "text/plain"
+        "sh", "bash" -> "text/x-shellscript"
+        "py" -> "text/x-python"
+        "kt", "kts" -> "text/x-kotlin"
+        "java" -> "text/x-java"
+        "js", "mjs", "cjs" -> "text/javascript"
+        "ts" -> "text/typescript"
+        "html", "htm" -> "text/html"
+        "css", "scss", "less" -> "text/css"
+        "sql" -> "text/x-sql"
+        "gradle" -> "text/plain"
+        "properties" -> "text/plain"
+        "toml" -> "text/plain"
+        "ini", "cfg" -> "text/plain"
+        "rs" -> "text/x-rust"
+        "c", "h" -> "text/x-c"
+        "cpp", "cc", "cxx", "hpp" -> "text/x-c++"
+        "rb" -> "text/x-ruby"
+        "go" -> "text/x-go"
+        "swift" -> "text/x-swift"
+        "dart" -> "text/x-dart"
+        "lua" -> "text/x-lua"
+        "r" -> "text/x-r"
+        "tex" -> "text/x-tex"
+        "rtf" -> "application/rtf"
+        "apk" -> "application/vnd.android.package-archive"
+        "zip" -> "application/zip"
+        "rar" -> "application/x-rar-compressed"
+        "7z" -> "application/x-7z-compressed"
+        "tar", "gz", "bz2", "xz" -> "application/x-tar"
+        else -> MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext)
+    }
 }
 
 // return file size in mb
@@ -102,6 +140,22 @@ fun File.partialMd5(bytesFromEachEnd: Int = 4096): String? {
 
 fun isFileImage(mimeType: String?) = mimeType?.contains("image", ignoreCase = true) == true
 fun isFileVideo(mimeType: String?) = mimeType?.contains("video", ignoreCase = true) == true
+fun isFileText(mimeType: String?) = mimeType?.startsWith("text") == true
+fun isFileAudio(mimeType: String?) = mimeType?.startsWith("audio") == true
+fun isFilePdf(mimeType: String?) = mimeType == "application/pdf"
+fun isFileArchive(mimeType: String?) = mimeType in listOf(
+    "application/zip", "application/x-rar-compressed",
+    "application/x-7z-compressed", "application/x-tar",
+)
+fun isFileApk(mimeType: String?) = mimeType == "application/vnd.android.package-archive"
+fun isFileOffice(mimeType: String?) = mimeType?.startsWith("application/vnd.openxmlformats-officedocument") == true
+    || mimeType in listOf("application/msword", "application/vnd.ms-excel", "application/vnd.ms-powerpoint")
+fun isFileCode(path: String): Boolean {
+    val ext = path.substringAfterLast('.', "").lowercase()
+    return ext in listOf("kt","java","py","js","ts","html","css","sh","bash","sql","go","rs","dart",
+        "swift","lua","r","rb","c","cpp","cc","cxx","h","hpp","gradle","toml","yaml","yml","json",
+        "xml","md","txt","log","ini","cfg","properties","htm")
+}
 
 fun isVideo(path: String): Boolean {
     val extension = path.substringAfterLast('.', "").lowercase()

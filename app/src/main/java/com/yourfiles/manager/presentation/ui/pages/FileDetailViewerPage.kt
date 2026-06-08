@@ -1,10 +1,13 @@
 package com.yourfiles.manager.presentation.ui.pages
 
-import androidx.compose.foundation.clickable
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -36,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -48,7 +52,14 @@ import com.yourfiles.manager.presentation.ui.components.common.PopupCompose
 import com.yourfiles.manager.presentation.ui.components.common.thumbnail.OtherFileThumbnailCompose
 import com.yourfiles.manager.presentation.vm.FileDetailViewerVM
 import com.yourfiles.manager.utils.getMimeType
+import com.yourfiles.manager.utils.isFileApk
+import com.yourfiles.manager.utils.isFileArchive
+import com.yourfiles.manager.utils.isFileAudio
+import com.yourfiles.manager.utils.isFileCode
 import com.yourfiles.manager.utils.isFileImage
+import com.yourfiles.manager.utils.isFileOffice
+import com.yourfiles.manager.utils.isFilePdf
+import com.yourfiles.manager.utils.isFileText
 import com.yourfiles.manager.utils.isFileVideo
 import java.io.File
 
@@ -121,6 +132,7 @@ fun FileDetailViewerCompose(
     val navigator = remember { App.instance.navController() }
     val showDeleteDialog = remember { vm.showDeleteDialog }
     val isDeleting = remember { vm.isDeleting }
+    val context = LocalContext.current
 
     val currentFile = currentFiles.getOrNull(pagerState.currentPage)
 
@@ -218,9 +230,84 @@ fun FileDetailViewerCompose(
                     modifier = Modifier.fillMaxSize().background(Color.Black),
                     contentAlignment = Alignment.Center,
                 ) {
+                    // ── Universal file type dispatcher ──
+                    val mime = file.fileType
+                    val filePath = file.id
                     when {
-                        isFileImage(file.fileType) -> ImageViewer(file.id)
-                        isFileVideo(file.fileType) -> VideoPlayer(file.id)
+                        // IMAGES (already works)
+                        isFileImage(mime) -> ImageViewer(file.id)
+
+                        // VIDEO (already works)
+                        isFileVideo(mime) -> VideoPlayer(file.id)
+
+                        // TEXT & CODE — txt, yaml, md, json, xml, csv, log, kt, py, java, etc.
+                        isFileText(mime) || isFileCode(filePath) ->
+                            TextViewerScreen(filePath = filePath)
+
+                        // PDF — open with system viewer
+                        isFilePdf(mime) -> {
+                            LaunchedEffect(filePath) {
+                                openWithSystem(context, filePath, mime)
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                CircularProgressIndicator(color = Color.White)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text("Opening PDF viewer...", color = Color.White.copy(alpha = 0.7f))
+                            }
+                        }
+
+                        // APK — show package info + install button
+                        isFileApk(mime) -> ApkInfoScreen(filePath = filePath)
+
+                        // AUDIO — open with system player
+                        isFileAudio(mime) -> {
+                            LaunchedEffect(filePath) {
+                                openWithSystem(context, filePath, mime)
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                CircularProgressIndicator(color = Color.White)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text("Opening audio player...", color = Color.White.copy(alpha = 0.7f))
+                            }
+                        }
+
+                        // ARCHIVE — zip, rar, 7z — open with system
+                        isFileArchive(mime) -> {
+                            LaunchedEffect(filePath) {
+                                openWithSystem(context, filePath, mime)
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                CircularProgressIndicator(color = Color.White)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text("Opening archive...", color = Color.White.copy(alpha = 0.7f))
+                            }
+                        }
+
+                        // OFFICE — doc, docx, xls, xlsx, ppt, pptx — system chooser
+                        isFileOffice(mime) -> {
+                            LaunchedEffect(filePath) {
+                                openWithSystem(context, filePath, mime)
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                CircularProgressIndicator(color = Color.White)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text("Opening...", color = Color.White.copy(alpha = 0.7f))
+                            }
+                        }
+
+                        // ANY OTHER MIME — try system viewer as last resort
+                        mime != null -> {
+                            LaunchedEffect(filePath) {
+                                openWithSystem(context, filePath, mime)
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                CircularProgressIndicator(color = Color.White)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text("Opening...", color = Color.White.copy(alpha = 0.7f))
+                            }
+                        }
+
+                        // FALLBACK — unknown type, show info only
                         else -> {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 OtherFileThumbnailCompose(filePath = file.fileName)
@@ -249,5 +336,26 @@ fun FileDetailViewerCompose(
                 }
             }
         }
+    }
+}
+
+/**
+ * Open a file with the system's Intent chooser.
+ * Uses FileProvider for N+ to share file URI safely.
+ */
+private fun openWithSystem(context: android.content.Context, filePath: String, mimeType: String?) {
+    try {
+        val file = File(filePath)
+        if (!file.exists()) return
+        val uri = androidx.core.content.FileProvider.getUriForFile(
+            context, "${context.packageName}.provider", file
+        )
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, mimeType ?: "*/*")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(intent, "Open with"))
+    } catch (_: Exception) {
+        // If no app can handle the file, do nothing — user sees the info fallback
     }
 }
