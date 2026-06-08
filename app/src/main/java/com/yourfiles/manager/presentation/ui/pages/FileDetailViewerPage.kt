@@ -140,7 +140,7 @@ fun FileDetailViewerCompose(
         PopupCompose(show = true, onPopupDismissed = { if (!isDeleting.value) vm.cancelDelete() }) {
             AlertDialog(
                 onDismissRequest = { if (!isDeleting.value) vm.cancelDelete() },
-                title = { Text(if (isDeleting.value) "Deleting..." else "Delete File") },
+                title = { Text(if (isDeleting.value) "Moving to Recycle Bin..." else "Move to Recycle Bin") },
                 text = {
                     if (isDeleting.value) {
                         Column(
@@ -152,7 +152,7 @@ fun FileDetailViewerCompose(
                             Text("Please wait...")
                         }
                     } else {
-                        Text("Are you sure you want to delete ${currentFile?.fileName}? You will not be able to recover it.")
+                        Text("Move \"${currentFile?.fileName}\" to the Recycle Bin? You can restore it later from the Trash.")
                     }
                 },
                 confirmButton = {
@@ -163,7 +163,7 @@ fun FileDetailViewerCompose(
                                     if (currentFiles.size <= 1) navigator.navigateUp()
                                 }
                             }
-                        }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                        }) { Text("Move to Bin", color = MaterialTheme.colorScheme.error) }
                     }
                 },
                 dismissButton = {

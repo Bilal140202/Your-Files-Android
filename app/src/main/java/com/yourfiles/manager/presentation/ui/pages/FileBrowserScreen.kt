@@ -224,12 +224,12 @@ fun FileBrowserScreen(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete") },
-            text = { Text("Delete ${state.selectedItems.size} selected items?") },
+            title = { Text("Move to Recycle Bin") },
+            text = { Text("Move ${state.selectedItems.size} selected item${if (state.selectedItems.size != 1) "s" else ""} to the Recycle Bin? You can restore them later from the Trash.") },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteSelected { showDeleteDialog = false }
-                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                }) { Text("Move to Bin", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }

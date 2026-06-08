@@ -121,7 +121,8 @@ class FlatDuplicatesFileManagerVM : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             val sizeBytes = File(localFile.id).length()
             launch { fileUseCases.deleteFile(localFile.id) }.join()
-            File(localFile.id).apply { if (exists()) delete() }
+            // Move to recycle bin instead of permanent delete
+            TrashManager.moveToTrash(setOf(localFile.id))
             SavedMemoryTracker.addSavedBytes(sizeBytes)
             withContext(Dispatchers.Main) {
                 selectedFileIds.value -= localFile.id

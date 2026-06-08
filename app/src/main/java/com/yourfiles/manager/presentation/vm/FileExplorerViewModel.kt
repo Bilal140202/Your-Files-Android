@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.yourfiles.manager.domain.model.FileItem
+import com.yourfiles.manager.utils.TrashManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -345,21 +346,13 @@ class FileExplorerViewModel(
     // ===== DELETE =====
 
     fun deleteSelected(onComplete: () -> Unit) {
+        val pathsToDelete = _state.value.selectedItems.toSet()
         viewModelScope.launch(Dispatchers.IO) {
-            _state.value.selectedItems.forEach { path ->
-                try {
-                    val file = File(path)
-                    if (file.exists()) {
-                        if (file.isDirectory) file.deleteRecursively()
-                        else file.delete()
-                    }
-                } catch (e: Exception) {
-                    Log.e("FileExplorer", "Error deleting $path", e)
-                }
-            }
+            // Move to recycle bin instead of permanent delete
+            TrashManager.moveToTrash(pathsToDelete)
             // Invalidate cache
             folderCache.remove(_state.value.currentPath)
-            _state.value.selectedItems.forEach { p -> File(p).parent?.let { folderCache.remove(it) } }
+            pathsToDelete.forEach { p -> File(p).parent?.let { folderCache.remove(it) } }
             navigateTo(_state.value.currentPath)
             onComplete()
         }
