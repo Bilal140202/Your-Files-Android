@@ -17,17 +17,15 @@ data class FileItem(
     val file: File get() = File(path)
 
     companion object {
+        /** Create a FileItem WITHOUT counting children (instant, no I/O). */
         fun fromFile(file: File): FileItem {
-            val childCount = if (file.isDirectory) {
-                file.listFiles()?.count() ?: 0
-            } else 0
             return FileItem(
                 name = file.name,
                 path = file.absolutePath,
                 isDirectory = file.isDirectory,
                 size = file.length(),
                 lastModified = file.lastModified(),
-                childCount = childCount,
+                childCount = 0, // loaded async later
             )
         }
     }

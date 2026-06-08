@@ -3,6 +3,7 @@ package com.yourfiles.manager.presentation.vm
 import android.app.Application
 import android.os.Environment
 import android.util.Log
+import androidx.collection.LruCache
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
@@ -11,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -61,6 +63,9 @@ class FileExplorerViewModel(
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     private val rootPath = Environment.getExternalStorageDirectory().absolutePath
 
+    /** LRU cache for folder contents — holds up to 20 folders. */
+    private val folderCache = LruCache<String, List<FileItem>>(20)
+
     companion object {
         private const val KEY_CURRENT_PATH = "current_path"
     }
@@ -81,9 +86,15 @@ class FileExplorerViewModel(
         }
     }
 
+    /**
+     * Navigate to a folder. Clears old items immediately (no flash),
+     * loads from cache or filesystem.
+     */
     fun navigateTo(path: String, saveState: Boolean = true) {
+        // BUG 3 FIX: Clear items IMMEDIATELY so old content doesn't flash
         _state.value = _state.value.copy(
             currentPath = path,
+            items = emptyList(),   // clear immediately — no content flash
             isLoading = true,
             error = null,
             selectedItems = emptySet(),
@@ -91,40 +102,36 @@ class FileExplorerViewModel(
             searchQuery = "",
             intervalAnchor = null,
             isIntervalMode = false,
-            // Keep clipboard across navigation (ES behavior)
         )
         if (saveState) {
             savedStateHandle[KEY_CURRENT_PATH] = path
         }
+
+        // BUG 2 FIX: Check cache FIRST — instant return
+        val cached = folderCache.get(path)
+        if (cached != null) {
+            Log.d("FileExplorer", "Cache hit: $path (${cached.size} items)")
+            _state.value = _state.value.copy(
+                isLoading = false,
+                items = cached,
+            )
+            // Update child counts in background (may have stale counts)
+            updateChildCountsAsync(path, cached)
+            return
+        }
+
+        // Load from filesystem
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val dir = File(path)
-                if (!dir.exists() || !dir.isDirectory) {
-                    _state.value = _state.value.copy(
-                        isLoading = false,
-                        error = "Directory not found: $path"
-                    )
-                    return@launch
-                }
-                val entries = dir.listFiles()
-                if (entries == null) {
-                    _state.value = _state.value.copy(
-                        isLoading = false,
-                        items = emptyList(),
-                        error = null
-                    )
-                    return@launch
-                }
-                val items = entries
-                    .filter { !it.name.startsWith(".") }
-                    .map { FileItem.fromFile(it) }
-                    .sortedWith(compareByDescending<FileItem> { it.isDirectory }.thenBy { it.name.lowercase() })
-
+                val items = loadFolderFast(path)
+                folderCache.put(path, items)
                 Log.d("FileExplorer", "Listed ${items.size} items in $path")
                 _state.value = _state.value.copy(
                     isLoading = false,
                     items = items,
                 )
+                // Count children async after list is shown
+                updateChildCountsAsync(path, items)
             } catch (e: Exception) {
                 Log.e("FileExplorer", "Error listing $path", e)
                 _state.value = _state.value.copy(
@@ -135,24 +142,82 @@ class FileExplorerViewModel(
         }
     }
 
+    /**
+     * Load folder contents WITHOUT counting children (instant).
+     * Only lists top-level entries and their metadata.
+     */
+    private fun loadFolderFast(path: String): List<FileItem> {
+        val dir = File(path)
+        if (!dir.exists() || !dir.isDirectory) {
+            throw IllegalArgumentException("Directory not found: $path")
+        }
+        val entries = dir.listFiles()
+        if (entries == null) return emptyList()
+
+        return entries
+            .filter { !it.name.startsWith(".") }
+            .map { FileItem.fromFile(it) }  // childCount = 0, no blocking I/O
+            .sortedWith(compareByDescending<FileItem> { it.isDirectory }.thenBy { it.name.lowercase() })
+    }
+
+    /**
+     * Count children for directories in the background and update state.
+     * This runs AFTER the list is already visible to the user.
+     */
+    private fun updateChildCountsAsync(path: String, items: List<FileItem>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val dirItems = items.filter { it.isDirectory }
+            val updates = mutableMapOf<String, Int>()
+            for (item in dirItems) {
+                try {
+                    val count = File(item.path).list()?.size ?: 0
+                    updates[item.path] = count
+                } catch (_: Exception) { }
+            }
+            if (updates.isEmpty()) return@launch
+
+            // Update state with new child counts
+            withContext(Dispatchers.Main) {
+                val currentItems = _state.value.items.toMutableList()
+                var changed = false
+                for (i in currentItems.indices) {
+                    val count = updates[currentItems[i].path]
+                    if (count != null && currentItems[i].childCount != count) {
+                        currentItems[i] = currentItems[i].copy(childCount = count)
+                        changed = true
+                    }
+                }
+                if (changed) {
+                    _state.value = _state.value.copy(items = currentItems)
+                }
+            }
+        }
+    }
+
     fun setSearchQuery(query: String) {
         _state.value = _state.value.copy(searchQuery = query)
     }
 
+    /**
+     * Check if we're at the root of the current storage tree.
+     * For SD card, the root is the SD card mount point itself.
+     * For internal, it's /storage/emulated/0.
+     */
     fun isAtRoot(): Boolean {
         val current = _state.value.currentPath
-        return current == rootPath || current.isEmpty()
+        if (current.isEmpty()) return true
+        if (current == rootPath) return true
+        // Check if parent is one of the known storage roots
+        val parent = File(current).parentFile?.absolutePath ?: return true
+        return parent == rootPath || parent == "/storage" || parent == "/"
     }
 
     fun navigateUp(): Boolean {
         if (isAtRoot()) return false
         val current = File(_state.value.currentPath)
         val parent = current.parentFile ?: return false
-        if (parent.absolutePath == rootPath || parent.canRead()) {
-            navigateTo(parent.absolutePath)
-            return true
-        }
-        return false
+        navigateTo(parent.absolutePath)
+        return true
     }
 
     // ===== SELECTION =====
@@ -160,7 +225,6 @@ class FileExplorerViewModel(
     fun toggleSelection(path: String) {
         val current = _state.value
         if (current.isIntervalMode && current.intervalAnchor != null) {
-            // Interval mode: select range from anchor to this item
             selectRange(current.intervalAnchor, path)
             _state.value = _state.value.copy(
                 intervalAnchor = null,
@@ -180,7 +244,6 @@ class FileExplorerViewModel(
         )
     }
 
-    /** Select all items in current display list. */
     fun selectAll() {
         val allPaths = _state.value.displayItems.map { it.path }.toSet()
         _state.value = _state.value.copy(
@@ -189,7 +252,6 @@ class FileExplorerViewModel(
         )
     }
 
-    /** Enter interval select mode. Next tap sets the range end. */
     fun enterIntervalMode() {
         _state.value = _state.value.copy(
             isIntervalMode = true,
@@ -197,7 +259,6 @@ class FileExplorerViewModel(
         )
     }
 
-    /** Select range between two paths (inclusive). */
     private fun selectRange(fromPath: String, toPath: String) {
         val displayPaths = _state.value.displayItems.map { it.path }
         val fromIdx = displayPaths.indexOf(fromPath).coerceAtLeast(0)
@@ -238,7 +299,6 @@ class FileExplorerViewModel(
         exitMultiSelect()
     }
 
-    /** Paste clipboard items into current folder. For CUT, deletes sources after copy. */
     fun pasteClipboard(onComplete: () -> Unit) {
         val clipboard = _state.value
         if (clipboard.clipboardPaths.isEmpty() || clipboard.clipboardMode == null) return
@@ -258,13 +318,15 @@ class FileExplorerViewModel(
                         else src.delete()
                     }
                 }
-                // Clear clipboard if was CUT mode (ES behavior)
                 if (clipboard.clipboardMode == ClipboardMode.CUT) {
                     _state.value = _state.value.copy(
                         clipboardPaths = emptyList(),
                         clipboardMode = null,
                     )
                 }
+                // Invalidate cache for destination and source folders
+                folderCache.remove(_state.value.currentPath)
+                clipboard.clipboardPaths.forEach { p -> File(p).parent?.let { folderCache.remove(it) } }
                 navigateTo(_state.value.currentPath)
                 onComplete()
             } catch (e: Exception) {
@@ -273,7 +335,6 @@ class FileExplorerViewModel(
         }
     }
 
-    /** Clear clipboard. */
     fun clearClipboard() {
         _state.value = _state.value.copy(
             clipboardPaths = emptyList(),
@@ -296,6 +357,9 @@ class FileExplorerViewModel(
                     Log.e("FileExplorer", "Error deleting $path", e)
                 }
             }
+            // Invalidate cache
+            folderCache.remove(_state.value.currentPath)
+            _state.value.selectedItems.forEach { p -> File(p).parent?.let { folderCache.remove(it) } }
             navigateTo(_state.value.currentPath)
             onComplete()
         }
@@ -313,6 +377,7 @@ class FileExplorerViewModel(
                 }
                 val newFile = File(oldFile.parentFile, newName)
                 if (oldFile.renameTo(newFile)) {
+                    folderCache.remove(_state.value.currentPath)
                     navigateTo(_state.value.currentPath)
                     onComplete()
                 } else {
@@ -330,6 +395,7 @@ class FileExplorerViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val dir = File(_state.value.currentPath, folderName)
             if (dir.mkdirs()) {
+                folderCache.remove(_state.value.currentPath)
                 navigateTo(_state.value.currentPath)
             }
         }
@@ -338,37 +404,56 @@ class FileExplorerViewModel(
     fun getBreadcrumbSegments(): List<Pair<String, String>> {
         val fullPath = _state.value.currentPath
         val segments = mutableListOf<Pair<String, String>>()
-        var current = fullPath
-        val parts = mutableListOf<String>()
 
-        while (current.isNotEmpty() && current != rootPath && current != "/") {
+        // Determine if we're browsing SD card
+        val isSdCard = fullPath.isNotEmpty() && !fullPath.startsWith(rootPath)
+
+        // Walk up the path to find the storage root
+        val effectiveRoot = if (isSdCard) {
+            // For SD card, the root is the mount point (e.g. /storage/76E3-1ADF)
+            var p = fullPath
+            while (p.isNotEmpty() && p != "/" && p != "/storage") {
+                val parent = File(p).parentFile?.absolutePath ?: break
+                if (parent == "/storage" || parent == "/") break
+                p = parent
+            }
+            p
+        } else {
+            rootPath
+        }
+
+        val rootLabel = if (isSdCard) {
+            "SD Card"
+        } else {
+            "Internal Storage"
+        }
+
+        // Build path segments from root
+        val parts = mutableListOf<String>()
+        var current = fullPath
+        while (current.isNotEmpty() && current != effectiveRoot && current != "/") {
             val file = File(current)
             parts.add(0, file.name)
             val parent = file.parentFile ?: break
             current = parent.absolutePath
-            if (current == rootPath) {
-                parts.add(0, "Internal Storage")
-                break
-            }
-        }
-        if (parts.isEmpty()) {
-            parts.add("Internal Storage")
         }
 
-        var buildPath = rootPath
-        segments.add("Internal Storage" to rootPath)
-        for (i in 1 until parts.size) {
-            buildPath = File(buildPath, parts[i]).absolutePath
-            segments.add(parts[i] to buildPath)
+        segments.add(rootLabel to effectiveRoot)
+        var buildPath = effectiveRoot
+        for (part in parts) {
+            buildPath = File(buildPath, part).absolutePath
+            segments.add(part to buildPath)
         }
         return segments
     }
 
     fun getCurrentFolderName(): String {
-        return File(_state.value.currentPath).name.ifEmpty { "Internal Storage" }
+        val path = _state.value.currentPath
+        if (path == rootPath || path.isEmpty()) return "Internal Storage"
+        val name = File(path).name
+        return name.ifEmpty { "Internal Storage" }
     }
 
-    /** Get item details for the "More" bottom sheet. */
     fun getItemDetails(path: String): String {
         val file = File(path)
         if (!file.exists()) return "File not found"
@@ -388,5 +473,10 @@ class FileExplorerViewModel(
     fun formatDate(timestamp: Long): String {
         if (timestamp == 0L) return ""
         return dateFormat.format(Date(timestamp))
+    }
+
+    /** Clear the folder cache (e.g. after file operations). */
+    fun clearCache() {
+        folderCache.evictAll()
     }
 }
