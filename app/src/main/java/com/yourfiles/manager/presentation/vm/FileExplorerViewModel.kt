@@ -10,21 +10,29 @@ import com.yourfiles.manager.domain.model.FileItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/** Clipboard state for Copy/Cut operations. */
+enum class ClipboardMode { COPY, CUT }
+
 data class ExplorerState(
     val currentPath: String = "",
-    val items: List<FileItem> = emptyList(),        // full unfiltered list
-    val searchQuery: String = "",                   // active search filter
+    val items: List<FileItem> = emptyList(),
+    val searchQuery: String = "",
     val isLoading: Boolean = false,
     val error: String? = null,
     val selectedItems: Set<String> = emptySet(),
     val isMultiSelectMode: Boolean = false,
+    // Select interval state
+    val intervalAnchor: String? = null,   // first item path for range selection
+    val isIntervalMode: Boolean = false,
+    // Clipboard state
+    val clipboardPaths: List<String> = emptyList(),
+    val clipboardMode: ClipboardMode? = null,
 ) {
     /** Derive display list: filtered by searchQuery, folders first always. */
     val displayItems: List<FileItem>
@@ -37,6 +45,9 @@ data class ExplorerState(
                     .thenBy { it.name.lowercase() }
             )
         }
+
+    /** True if clipboard has items to paste. */
+    val hasClipboard: Boolean get() = clipboardPaths.isNotEmpty()
 }
 
 class FileExplorerViewModel(
@@ -55,25 +66,19 @@ class FileExplorerViewModel(
     }
 
     init {
-        // Restore saved path from SavedStateHandle — survives ViewModel recreation
         val savedPath = savedStateHandle.get<String>(KEY_CURRENT_PATH)
         val startPath = savedPath ?: rootPath
-        navigateTo(startPath, saveState = false) // don't double-save on init
+        navigateTo(startPath, saveState = false)
         if (savedPath != null) {
             savedStateHandle[KEY_CURRENT_PATH] = savedPath
         }
     }
 
-    /**
-     * Called from FileBrowserScreen with the nav argument path.
-     * Only applies if ViewModel has no saved path (first launch).
-     */
     fun initWithNavPath(navPath: String?) {
         val savedPath = savedStateHandle.get<String>(KEY_CURRENT_PATH)
         if (savedPath == null && navPath != null) {
             navigateTo(navPath)
         }
-        // If savedPath exists, ViewModel already restored it — ignore nav argument
     }
 
     fun navigateTo(path: String, saveState: Boolean = true) {
@@ -83,7 +88,10 @@ class FileExplorerViewModel(
             error = null,
             selectedItems = emptySet(),
             isMultiSelectMode = false,
-            searchQuery = "", // clear search on folder change
+            searchQuery = "",
+            intervalAnchor = null,
+            isIntervalMode = false,
+            // Keep clipboard across navigation (ES behavior)
         )
         if (saveState) {
             savedStateHandle[KEY_CURRENT_PATH] = path
@@ -100,7 +108,6 @@ class FileExplorerViewModel(
                 }
                 val entries = dir.listFiles()
                 if (entries == null) {
-                    Log.e("FileExplorer", "listFiles() returned null for $path")
                     _state.value = _state.value.copy(
                         isLoading = false,
                         items = emptyList(),
@@ -128,9 +135,6 @@ class FileExplorerViewModel(
         }
     }
 
-    /**
-     * Update search query. Called from UI after 150ms debounce.
-     */
     fun setSearchQuery(query: String) {
         _state.value = _state.value.copy(searchQuery = query)
     }
@@ -151,16 +155,59 @@ class FileExplorerViewModel(
         return false
     }
 
+    // ===== SELECTION =====
+
     fun toggleSelection(path: String) {
-        val current = _state.value.selectedItems.toMutableSet()
-        if (current.contains(path)) {
-            current.remove(path)
+        val current = _state.value
+        if (current.isIntervalMode && current.intervalAnchor != null) {
+            // Interval mode: select range from anchor to this item
+            selectRange(current.intervalAnchor, path)
+            _state.value = _state.value.copy(
+                intervalAnchor = null,
+                isIntervalMode = false,
+            )
+            return
+        }
+        val selected = current.selectedItems.toMutableSet()
+        if (selected.contains(path)) {
+            selected.remove(path)
         } else {
-            current.add(path)
+            selected.add(path)
         }
         _state.value = _state.value.copy(
-            selectedItems = current,
-            isMultiSelectMode = current.isNotEmpty()
+            selectedItems = selected,
+            isMultiSelectMode = selected.isNotEmpty(),
+        )
+    }
+
+    /** Select all items in current display list. */
+    fun selectAll() {
+        val allPaths = _state.value.displayItems.map { it.path }.toSet()
+        _state.value = _state.value.copy(
+            selectedItems = allPaths,
+            isMultiSelectMode = allPaths.isNotEmpty(),
+        )
+    }
+
+    /** Enter interval select mode. Next tap sets the range end. */
+    fun enterIntervalMode() {
+        _state.value = _state.value.copy(
+            isIntervalMode = true,
+            intervalAnchor = _state.value.selectedItems.firstOrNull(),
+        )
+    }
+
+    /** Select range between two paths (inclusive). */
+    private fun selectRange(fromPath: String, toPath: String) {
+        val displayPaths = _state.value.displayItems.map { it.path }
+        val fromIdx = displayPaths.indexOf(fromPath).coerceAtLeast(0)
+        val toIdx = displayPaths.indexOf(toPath).coerceAtLeast(0)
+        val start = minOf(fromIdx, toIdx)
+        val end = maxOf(fromIdx, toIdx)
+        val rangePaths = displayPaths.subList(start, end + 1).toSet()
+        _state.value = _state.value.copy(
+            selectedItems = rangePaths,
+            isMultiSelectMode = rangePaths.isNotEmpty(),
         )
     }
 
@@ -168,17 +215,73 @@ class FileExplorerViewModel(
         _state.value = _state.value.copy(
             selectedItems = emptySet(),
             isMultiSelectMode = false,
+            intervalAnchor = null,
+            isIntervalMode = false,
         )
     }
 
-    fun createFolder(folderName: String) {
+    // ===== CLIPBOARD: COPY / CUT / PASTE =====
+
+    fun copySelected() {
+        _state.value = _state.value.copy(
+            clipboardPaths = _state.value.selectedItems.toList(),
+            clipboardMode = ClipboardMode.COPY,
+        )
+        exitMultiSelect()
+    }
+
+    fun cutSelected() {
+        _state.value = _state.value.copy(
+            clipboardPaths = _state.value.selectedItems.toList(),
+            clipboardMode = ClipboardMode.CUT,
+        )
+        exitMultiSelect()
+    }
+
+    /** Paste clipboard items into current folder. For CUT, deletes sources after copy. */
+    fun pasteClipboard(onComplete: () -> Unit) {
+        val clipboard = _state.value
+        if (clipboard.clipboardPaths.isEmpty() || clipboard.clipboardMode == null) return
+
         viewModelScope.launch(Dispatchers.IO) {
-            val dir = File(_state.value.currentPath, folderName)
-            if (dir.mkdirs()) {
+            val destDir = File(_state.value.currentPath)
+            try {
+                clipboard.clipboardPaths.forEach { srcPath ->
+                    val src = File(srcPath)
+                    if (!src.exists()) return@forEach
+                    val dest = File(destDir, src.name)
+                    if (!dest.exists()) {
+                        src.copyTo(dest, overwrite = false)
+                    }
+                    if (clipboard.clipboardMode == ClipboardMode.CUT) {
+                        if (src.isDirectory) src.deleteRecursively()
+                        else src.delete()
+                    }
+                }
+                // Clear clipboard if was CUT mode (ES behavior)
+                if (clipboard.clipboardMode == ClipboardMode.CUT) {
+                    _state.value = _state.value.copy(
+                        clipboardPaths = emptyList(),
+                        clipboardMode = null,
+                    )
+                }
                 navigateTo(_state.value.currentPath)
+                onComplete()
+            } catch (e: Exception) {
+                Log.e("FileExplorer", "Paste error", e)
             }
         }
     }
+
+    /** Clear clipboard. */
+    fun clearClipboard() {
+        _state.value = _state.value.copy(
+            clipboardPaths = emptyList(),
+            clipboardMode = null,
+        )
+    }
+
+    // ===== DELETE =====
 
     fun deleteSelected(onComplete: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -195,6 +298,40 @@ class FileExplorerViewModel(
             }
             navigateTo(_state.value.currentPath)
             onComplete()
+        }
+    }
+
+    // ===== RENAME =====
+
+    fun renameItem(oldPath: String, newName: String, onComplete: () -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val oldFile = File(oldPath)
+                if (!oldFile.exists()) {
+                    Log.e("FileExplorer", "Rename: file not found $oldPath")
+                    return@launch
+                }
+                val newFile = File(oldFile.parentFile, newName)
+                if (oldFile.renameTo(newFile)) {
+                    navigateTo(_state.value.currentPath)
+                    onComplete()
+                } else {
+                    Log.e("FileExplorer", "Rename failed: $oldPath -> $newName")
+                }
+            } catch (e: Exception) {
+                Log.e("FileExplorer", "Rename error", e)
+            }
+        }
+    }
+
+    // ===== FILE OPERATIONS =====
+
+    fun createFolder(folderName: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val dir = File(_state.value.currentPath, folderName)
+            if (dir.mkdirs()) {
+                navigateTo(_state.value.currentPath)
+            }
         }
     }
 
@@ -227,9 +364,25 @@ class FileExplorerViewModel(
         return segments
     }
 
-    /** Get the current folder name for search hint. */
     fun getCurrentFolderName(): String {
         return File(_state.value.currentPath).name.ifEmpty { "Internal Storage" }
+    }
+
+    /** Get item details for the "More" bottom sheet. */
+    fun getItemDetails(path: String): String {
+        val file = File(path)
+        if (!file.exists()) return "File not found"
+        val sb = StringBuilder()
+        sb.append("Name: ${file.name}\n")
+        sb.append("Path: ${file.absolutePath}\n")
+        sb.append("Size: ${android.text.format.Formatter.formatFileSize(getApplication(), file.length())}\n")
+        sb.append("Modified: ${dateFormat.format(Date(file.lastModified()))}\n")
+        sb.append("Type: ${if (file.isDirectory) "Folder" else file.extension.uppercase() + " file"}")
+        if (file.isDirectory) {
+            val children = file.listFiles()
+            sb.append("\nContents: ${children?.size ?: 0} items")
+        }
+        return sb.toString()
     }
 
     fun formatDate(timestamp: Long): String {

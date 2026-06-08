@@ -1,15 +1,20 @@
 package com.yourfiles.manager.presentation.ui.pages
 
+import android.content.Intent
 import android.text.format.Formatter
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import java.io.File
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,30 +24,50 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.ContentCut
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.outlined.ContentPasteGo
 import androidx.compose.material.icons.outlined.CreateNewFolder
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material3.Surface
+import androidx.compose.material.icons.outlined.DriveFileRenameOutline
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.SelectAll
+import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -51,6 +76,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -61,6 +87,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -68,6 +95,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -89,6 +117,8 @@ fun FileBrowserScreen(
     viewModel: FileExplorerViewModel = viewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
+    val displayItems = state.displayItems
 
     var showCreateFolderDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -96,57 +126,69 @@ fun FileBrowserScreen(
 
     // Search state
     var isSearchActive by remember { mutableStateOf(false) }
-    var searchTextInput by remember { mutableStateOf("") } // raw TextField input
+    var searchTextInput by remember { mutableStateOf("") }
     val searchFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    // Derived display list (filtered if searching)
-    val displayItems = state.displayItems
+    // Rename dialog
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var renamePath by remember { mutableStateOf("") }
+    var renameInput by remember { mutableStateOf("") }
+
+    // More bottom sheet
+    var showMoreSheet by remember { mutableStateOf(false) }
+    val moreSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // Info bottom sheet
+    var showInfoSheet by remember { mutableStateOf(false) }
+    var infoText by remember { mutableStateOf("") }
 
     val scrollState = rememberLazyListState()
 
-    // Only apply nav argument on very first launch — never override SavedStateHandle
     LaunchedEffect(Unit) {
         viewModel.initWithNavPath(initialPath)
     }
 
-    // When currentPath changes (folder navigation), reset scroll to top
     LaunchedEffect(state.currentPath) {
         if (scrollState.firstVisibleItemIndex > 0) {
             scrollState.animateScrollToItem(0)
         }
     }
 
-    // Debounce: push raw search text to ViewModel after 150ms of inactivity
+    // Debounce search
     LaunchedEffect(Unit) {
         snapshotFlow { searchTextInput }
             .debounce(150)
             .distinctUntilChanged()
-            .collect { query ->
-                viewModel.setSearchQuery(query)
-            }
+            .collect { viewModel.setSearchQuery(it) }
     }
 
     // Auto-focus keyboard when search activates
     LaunchedEffect(isSearchActive) {
         if (isSearchActive) {
-            delay(100) // small delay for TextField to be laid out
+            delay(100)
             searchFocusRequester.requestFocus()
             keyboardController?.show()
         }
     }
 
-    // Back handler: close search first, then navigate up folders
+    // Back priority: search > selection > folder nav
     BackHandler(enabled = isSearchActive) {
         isSearchActive = false
         searchTextInput = ""
         viewModel.setSearchQuery("")
         keyboardController?.hide()
     }
-    BackHandler(enabled = !viewModel.isAtRoot() && !isSearchActive) {
+    BackHandler(enabled = state.isMultiSelectMode) {
+        viewModel.exitMultiSelect()
+    }
+    BackHandler(enabled = !viewModel.isAtRoot() && !isSearchActive && !state.isMultiSelectMode) {
         viewModel.navigateUp()
     }
 
+    // ===== DIALOGS =====
+
+    // Create folder dialog
     if (showCreateFolderDialog) {
         AlertDialog(
             onDismissRequest = { showCreateFolderDialog = false },
@@ -178,6 +220,7 @@ fun FileBrowserScreen(
         )
     }
 
+    // Delete dialog
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -186,7 +229,7 @@ fun FileBrowserScreen(
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteSelected { showDeleteDialog = false }
-                }) { Text("Delete") }
+                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
@@ -194,11 +237,194 @@ fun FileBrowserScreen(
         )
     }
 
+    // Rename dialog
+    if (showRenameDialog) {
+        AlertDialog(
+            onDismissRequest = { showRenameDialog = false },
+            title = { Text("Rename") },
+            text = {
+                OutlinedTextField(
+                    value = renameInput,
+                    onValueChange = { renameInput = it },
+                    label = { Text("New name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (renameInput.isNotBlank()) {
+                            viewModel.renameItem(renamePath, renameInput.trim()) {
+                                showRenameDialog = false
+                            }
+                        }
+                    },
+                    enabled = renameInput.isNotBlank() && renameInput != java.io.File(renamePath).name,
+                ) { Text("Rename") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRenameDialog = false }) { Text("Cancel") }
+            },
+        )
+    }
+
+    // More bottom sheet
+    if (showMoreSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showMoreSheet = false },
+            sheetState = moreSheetState,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = "More options",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 16.dp),
+                )
+
+                // Share
+                BottomSheetAction(
+                    icon = Icons.Outlined.Share,
+                    label = "Share",
+                    onClick = {
+                        showMoreSheet = false
+                        val firstFile = state.selectedItems.firstOrNull() ?: return@BottomSheetAction
+                        val file = java.io.File(firstFile)
+                        if (file.exists()) {
+                            val uri = androidx.core.content.FileProvider.getUriForFile(
+                                context, "${context.packageName}.provider", file
+                            )
+                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = "*/*"
+                                putExtra(Intent.EXTRA_STREAM, uri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            context.startActivity(Intent.createChooser(shareIntent, "Share"))
+                        }
+                    },
+                )
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                // Properties / Info
+                BottomSheetAction(
+                    icon = Icons.Outlined.Info,
+                    label = "Properties",
+                    onClick = {
+                        showMoreSheet = false
+                        val firstFile = state.selectedItems.firstOrNull() ?: return@BottomSheetAction
+                        infoText = viewModel.getItemDetails(firstFile)
+                        showInfoSheet = true
+                    },
+                )
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                // Details (same as properties for now)
+                BottomSheetAction(
+                    icon = Icons.Outlined.Info,
+                    label = "Details",
+                    onClick = {
+                        showMoreSheet = false
+                        val firstFile = state.selectedItems.firstOrNull() ?: return@BottomSheetAction
+                        infoText = viewModel.getItemDetails(firstFile)
+                        showInfoSheet = true
+                    },
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+
+    // Info bottom sheet
+    if (showInfoSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showInfoSheet = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+            ) {
+                Text(
+                    text = "Properties",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 12.dp),
+                )
+                Text(
+                    text = infoText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    lineHeight = 22.sp,
+                )
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+
+    // ===== SCAFFOLD =====
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
-            if (isSearchActive) {
-                // SEARCH MODE: inline search bar (ES 2014 style)
+            if (state.isMultiSelectMode) {
+                // ===== SELECTION MODE TOP BAR (ES style) =====
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "${state.selectedItems.size}/${displayItems.size}",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    },
+                    navigationIcon = {
+                        // Hidden in selection mode (back handled by BackHandler)
+                        Box(modifier = Modifier.size(48.dp))
+                    },
+                    actions = {
+                        // Select All
+                        IconButton(onClick = { viewModel.selectAll() }) {
+                            Icon(
+                                Icons.Outlined.SelectAll,
+                                contentDescription = "Select All",
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                            )
+                        }
+                        // Select Interval
+                        IconButton(
+                            onClick = { viewModel.enterIntervalMode() },
+                            enabled = state.selectedItems.size >= 1,
+                        ) {
+                            Icon(
+                                Icons.Outlined.SwapHoriz,
+                                contentDescription = "Select Interval",
+                                tint = if (state.isIntervalMode)
+                                    Color.Yellow
+                                else
+                                    MaterialTheme.colorScheme.onPrimary,
+                            )
+                        }
+                        // Cancel
+                        IconButton(onClick = { viewModel.exitMultiSelect() }) {
+                            Icon(
+                                Icons.Filled.Close,
+                                contentDescription = "Cancel",
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                    ),
+                )
+            } else if (isSearchActive) {
+                // ===== SEARCH MODE =====
                 TopAppBar(
                     title = {
                         TextField(
@@ -265,7 +491,7 @@ fun FileBrowserScreen(
                     ),
                 )
             } else {
-                // NORMAL MODE: breadcrumb navigation
+                // ===== NORMAL MODE: breadcrumb =====
                 TopAppBar(
                     title = {
                         val segments = viewModel.getBreadcrumbSegments()
@@ -314,19 +540,12 @@ fun FileBrowserScreen(
                         }
                     },
                     actions = {
-                        if (state.isMultiSelectMode) {
-                            IconButton(onClick = { showDeleteDialog = true }) {
-                                Icon(Icons.Outlined.Delete, "Delete", tint = MaterialTheme.colorScheme.onPrimary)
-                            }
-                            TextButton(onClick = { viewModel.exitMultiSelect() }) {
-                                Text("Cancel", color = MaterialTheme.colorScheme.onPrimary)
-                            }
-                        } else {
-                            IconButton(onClick = {
-                                isSearchActive = true
-                            }) {
-                                Icon(Icons.Outlined.Search, "Search", tint = MaterialTheme.colorScheme.onPrimary)
-                            }
+                        IconButton(onClick = { isSearchActive = true }) {
+                            Icon(
+                                Icons.Outlined.Search,
+                                contentDescription = "Search",
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                            )
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -340,14 +559,46 @@ fun FileBrowserScreen(
         },
         floatingActionButton = {
             if (!state.isMultiSelectMode && !isSearchActive) {
-                FloatingActionButton(
-                    onClick = { showCreateFolderDialog = true },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                ) {
-                    Icon(Icons.Outlined.CreateNewFolder, "New Folder", tint = MaterialTheme.colorScheme.onPrimary)
+                if (state.hasClipboard) {
+                    // Paste FAB (appears when clipboard has items)
+                    FloatingActionButton(
+                        onClick = { viewModel.pasteClipboard({}) },
+                        containerColor = MaterialTheme.colorScheme.tertiary,
+                    ) {
+                        Icon(Icons.Filled.ContentPaste, "Paste", tint = MaterialTheme.colorScheme.onTertiary)
+                    }
+                } else {
+                    FloatingActionButton(
+                        onClick = { showCreateFolderDialog = true },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                    ) {
+                        Icon(
+                            Icons.Outlined.CreateNewFolder,
+                            "New Folder",
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    }
                 }
             }
-        }
+        },
+        bottomBar = {
+            if (state.isMultiSelectMode) {
+                // ===== BOTTOM ACTION BAR (ES 2014 style, 56dp) =====
+                BottomActionBar(
+                    onCopy = { viewModel.copySelected() },
+                    onCut = { viewModel.cutSelected() },
+                    onDelete = { showDeleteDialog = true },
+                    onRename = {
+                        val firstPath = state.selectedItems.firstOrNull() ?: return@BottomActionBar
+                        renamePath = firstPath
+                        renameInput = java.io.File(firstPath).name
+                        showRenameDialog = true
+                    },
+                    onMore = { showMoreSheet = true },
+                    canRename = state.selectedItems.size == 1,
+                )
+            }
+        },
     ) { paddingValues ->
         if (state.error != null) {
             Box(
@@ -414,6 +665,7 @@ fun FileBrowserScreen(
                         item = item,
                         isSelected = state.selectedItems.contains(item.path),
                         isMultiSelectMode = state.isMultiSelectMode,
+                        isIntervalMode = state.isIntervalMode,
                         dateFormatter = { viewModel.formatDate(it) },
                         onClick = {
                             if (state.isMultiSelectMode) {
@@ -441,12 +693,143 @@ fun FileBrowserScreen(
     }
 }
 
+// ===== BOTTOM ACTION BAR (ES 2014) =====
+
+@Composable
+private fun BottomActionBar(
+    onCopy: () -> Unit,
+    onCut: () -> Unit,
+    onDelete: () -> Unit,
+    onRename: () -> Unit,
+    onMore: () -> Unit,
+    canRename: Boolean,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 8.dp,
+        tonalElevation = 0.dp,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .padding(horizontal = 4.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            BottomActionBtn(
+                icon = Icons.Filled.ContentCopy,
+                label = "Copy",
+                onClick = onCopy,
+                modifier = Modifier.weight(1f, fill = true),
+            )
+            BottomActionBtn(
+                icon = Icons.Filled.ContentCut,
+                label = "Cut",
+                onClick = onCut,
+                modifier = Modifier.weight(1f, fill = true),
+            )
+            BottomActionBtn(
+                icon = Icons.Outlined.Delete,
+                label = "Delete",
+                onClick = onDelete,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.weight(1f, fill = true),
+            )
+            BottomActionBtn(
+                icon = Icons.Outlined.DriveFileRenameOutline,
+                label = "Rename",
+                onClick = onRename,
+                enabled = canRename,
+                modifier = Modifier.weight(1f, fill = true),
+            )
+            BottomActionBtn(
+                icon = Icons.Filled.MoreVert,
+                label = "More",
+                onClick = onMore,
+                modifier = Modifier.weight(1f, fill = true),
+            )
+        }
+    }
+}
+
+@Composable
+private fun BottomActionBtn(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    tint: Color = MaterialTheme.colorScheme.onSurface,
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier,
+) {
+    val alpha = if (enabled) 1f else 0.38f
+    Column(
+        modifier = modifier
+            .height(56.dp)
+            .clip(CircleShape)
+            .combinedClickable(
+                onClick = { if (enabled) onClick() },
+            ),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = tint.copy(alpha = alpha),
+            modifier = Modifier.size(22.dp),
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            color = tint.copy(alpha = alpha),
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+        )
+    }
+}
+
+// ===== MORE BOTTOM SHEET ACTION =====
+
+@Composable
+private fun BottomSheetAction(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.extraSmall)
+            .combinedClickable(onClick = onClick)
+            .padding(vertical = 12.dp, horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            modifier = Modifier.size(24.dp),
+            tint = MaterialTheme.colorScheme.onSurface,
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+// ===== FILE LIST ITEM =====
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun FileListItem(
     item: FileItem,
     isSelected: Boolean,
     isMultiSelectMode: Boolean,
+    isIntervalMode: Boolean,
     dateFormatter: (Long) -> String,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
@@ -464,19 +847,32 @@ private fun FileListItem(
                 onLongClick = onLongClick,
             )
             .background(
-                if (isSelected) MaterialTheme.colorScheme.primaryContainer
-                else MaterialTheme.colorScheme.surface
+                when {
+                    isSelected -> MaterialTheme.colorScheme.primaryContainer
+                    isIntervalMode -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f)
+                    else -> MaterialTheme.colorScheme.surface
+                }
             )
             .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (isMultiSelectMode) {
-            Checkbox(
-                checked = isSelected,
-                onCheckedChange = { onLongClick() },
-                modifier = Modifier.size(24.dp),
-            )
-            Spacer(modifier = Modifier.width(4.dp))
+            if (isSelected) {
+                Icon(
+                    Icons.Filled.CheckCircle,
+                    contentDescription = "Selected",
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            } else {
+                Icon(
+                    Icons.Filled.RadioButtonUnchecked,
+                    contentDescription = "Not selected",
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
         }
 
         Icon(
@@ -524,6 +920,8 @@ private fun FileListItem(
         }
     }
 }
+
+// ===== ICON HELPERS =====
 
 private fun getFileIcon(item: FileItem): ImageVector {
     return if (item.isDirectory) {
