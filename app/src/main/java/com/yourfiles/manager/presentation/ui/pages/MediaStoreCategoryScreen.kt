@@ -2,7 +2,6 @@ package com.yourfiles.manager.presentation.ui.pages
 
 import android.text.format.Formatter
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,12 +14,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.MusicNote
@@ -36,11 +35,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,13 +48,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.paging.LoadState
-import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
 import com.yourfiles.manager.app.App
 import com.yourfiles.manager.app.Routes
 import com.yourfiles.manager.domain.model.FileItem
 import com.yourfiles.manager.presentation.vm.CategoryType
+import com.yourfiles.manager.presentation.vm.CategoryUiState
 import com.yourfiles.manager.presentation.vm.MediaStoreCategoryVM
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -71,7 +66,7 @@ import java.util.Locale
  * - Shows ALL files of a type from Internal + SD, flat list, no folders
  * - Sorted by date modified DESC (newest first)
  * - Thumbnails for images/videos via Coil
- * - Paginated — first 100 items load instantly, rest on scroll
+ * - Direct MediaStore query, no Paging 3 tokens
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,21 +74,7 @@ fun MediaStoreCategoryScreen(
     categoryType: CategoryType,
     viewModel: MediaStoreCategoryVM = viewModel(),
 ) {
-    val pagingItems = viewModel.pagedItems.collectAsLazyPagingItems()
-
-    // Track total count from ViewModel
-    var totalCount by remember { mutableIntStateOf(0) }
-    LaunchedEffect(viewModel.totalCount) {
-        totalCount = viewModel.totalCount
-    }
-
-    // Refresh count when items finish loading
-    val loadState = pagingItems.loadState
-    LaunchedEffect(loadState.refresh) {
-        if (loadState.refresh is LoadState.NotLoading) {
-            totalCount = viewModel.totalCount
-        }
-    }
+    val state by viewModel.state.collectAsState()
 
     Scaffold(
         topBar = {
@@ -105,9 +86,9 @@ fun MediaStoreCategoryScreen(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                         )
-                        if (totalCount > 0) {
+                        if (state.totalCount > 0) {
                             Text(
-                                text = "%,d items".format(totalCount),
+                                text = "%,d items".format(state.totalCount),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f),
                             )
@@ -139,8 +120,8 @@ fun MediaStoreCategoryScreen(
                 .padding(paddingValues),
         ) {
             when {
-                // First load — show spinner
-                loadState.refresh is LoadState.Loading && pagingItems.itemCount == 0 -> {
+                // Loading spinner
+                state.isLoading -> {
                     CircularProgressIndicator(
                         modifier = Modifier
                             .size(24.dp)
@@ -149,26 +130,25 @@ fun MediaStoreCategoryScreen(
                         color = MaterialTheme.colorScheme.primary,
                     )
                 }
-                // Error on refresh
-                loadState.refresh is LoadState.Error -> {
-                    val error = (loadState.refresh as LoadState.Error).error
+                // Error
+                state.error != null -> {
                     Column(
                         modifier = Modifier.align(Alignment.Center),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Text(
-                            text = error.message ?: "Error loading files",
+                            text = state.error ?: "Error",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.error,
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        TextButton(onClick = { pagingItems.retry() }) {
+                        TextButton(onClick = { viewModel.retry() }) {
                             Text("Retry")
                         }
                     }
                 }
-                // Empty result
-                loadState.refresh is LoadState.NotLoading && pagingItems.itemCount == 0 -> {
+                // Empty
+                state.items.isEmpty() -> {
                     Text(
                         text = "No ${categoryType.label.lowercase()} found",
                         style = MaterialTheme.typography.bodyMedium,
@@ -176,65 +156,27 @@ fun MediaStoreCategoryScreen(
                         modifier = Modifier.align(Alignment.Center),
                     )
                 }
-                // Normal — show the list
+                // File list
                 else -> {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(vertical = 0.dp),
                     ) {
-                        items(
-                            count = pagingItems.itemCount,
-                            key = { index ->
-                                pagingItems[index]?.path ?: index
-                            },
-                        ) { index ->
-                            val item = pagingItems[index]
-                            if (item != null) {
-                                CategoryFileRow(
-                                    item = item,
-                                    categoryType = categoryType,
-                                    onClick = {
-                                        // Open file in viewer
-                                        App.instance.navController().navigate(
-                                            "${Routes.FILE_DETAIL_VIEWER}?url=${android.net.Uri.encode(item.path)}&category=file"
-                                        )
-                                    },
-                                )
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(start = 56.dp),
-                                    thickness = 0.5.dp,
-                                    color = MaterialTheme.colorScheme.outlineVariant,
-                                )
-                            }
-                        }
-
-                        // Load more indicator at bottom
-                        if (loadState.append is LoadState.Loading) {
-                            item {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(20.dp),
-                                        strokeWidth = 2.dp,
+                        items(state.items, key = { it.path }) { item ->
+                            CategoryFileRow(
+                                item = item,
+                                categoryType = categoryType,
+                                onClick = {
+                                    App.instance.navController().navigate(
+                                        "${Routes.FILE_DETAIL_VIEWER}?url=${android.net.Uri.encode(item.path)}&category=file"
                                     )
-                                }
-                            }
-                        }
-
-                        // Append error
-                        if (loadState.append is LoadState.Error) {
-                            item {
-                                TextButton(
-                                    onClick = { pagingItems.retry() },
-                                    modifier = Modifier.fillMaxWidth(),
-                                ) {
-                                    Text("Load more failed. Tap to retry.")
-                                }
-                            }
+                                },
+                            )
+                            HorizontalDivider(
+                                modifier = Modifier.padding(start = 56.dp),
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant,
+                            )
                         }
                     }
                 }
@@ -275,7 +217,6 @@ private fun CategoryFileRow(
         ) {
             when (categoryType) {
                 CategoryType.IMAGES -> {
-                    // Coil thumbnail for images
                     AsyncImage(
                         model = item.path,
                         contentDescription = null,
@@ -285,7 +226,6 @@ private fun CategoryFileRow(
                     )
                 }
                 CategoryType.VIDEOS -> {
-                    // Coil can decode video frames
                     AsyncImage(
                         model = item.path,
                         contentDescription = null,
@@ -295,7 +235,6 @@ private fun CategoryFileRow(
                     )
                 }
                 else -> {
-                    // Use Material icon
                     Icon(
                         imageVector = getCategoryIcon(categoryType),
                         contentDescription = null,
