@@ -244,17 +244,8 @@ fun FileDetailViewerCompose(
                         isFileText(mime) || isFileCode(filePath) ->
                             TextViewerScreen(filePath = filePath)
 
-                        // PDF — open with system viewer
-                        isFilePdf(mime) -> {
-                            LaunchedEffect(filePath) {
-                                openWithSystem(context, filePath, mime)
-                            }
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                CircularProgressIndicator(color = Color.White)
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text("Opening PDF viewer...", color = Color.White.copy(alpha = 0.7f))
-                            }
-                        }
+                        // PDF — native in-app viewer with PdfRenderer
+                        isFilePdf(mime) -> PdfViewerScreen(filePath = filePath)
 
                         // APK — show package info + install button
                         isFileApk(mime) -> ApkInfoScreen(filePath = filePath)
