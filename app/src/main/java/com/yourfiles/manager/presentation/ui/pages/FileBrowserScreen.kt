@@ -1,14 +1,15 @@
 package com.yourfiles.manager.presentation.ui.pages
 
 import android.text.format.Formatter
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,9 +19,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.CreateNewFolder
@@ -31,9 +31,9 @@ import androidx.compose.material.icons.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -55,11 +55,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -83,10 +81,26 @@ fun FileBrowserScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
 
-    LaunchedEffect(initialPath) {
+    // Scroll position preserved per path via a map of remembered states
+    val scrollState = rememberLazyListState()
+
+    // Navigate to initial path only once on first composition
+    LaunchedEffect(Unit) {
         if (initialPath != null) {
             viewModel.navigateTo(initialPath)
         }
+    }
+
+    // When currentPath changes (folder navigation), reset scroll to top
+    LaunchedEffect(state.currentPath) {
+        if (scrollState.firstVisibleItemIndex > 0) {
+            scrollState.animateScrollToItem(0)
+        }
+    }
+
+    // Back handler: go to parent folder when not at root
+    BackHandler(enabled = !viewModel.isAtRoot()) {
+        viewModel.navigateUp()
     }
 
     if (showCreateFolderDialog) {
@@ -152,7 +166,7 @@ fun FileBrowserScreen(
                                     tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f),
                                 )
                             }
-                            androidx.compose.material3.TextButton(
+                            TextButton(
                                 onClick = {
                                     if (path != state.currentPath) {
                                         viewModel.navigateTo(path)
@@ -222,16 +236,8 @@ fun FileBrowserScreen(
             }
         }
     ) { paddingValues ->
-        if (state.isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text("Loading...", style = MaterialTheme.typography.bodyMedium)
-            }
-        } else if (state.error != null) {
+        if (state.error != null) {
+            // Error state — shown only when there's an actual error
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -252,12 +258,30 @@ fun FileBrowserScreen(
             }
         } else {
             LazyColumn(
+                state = scrollState,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 0.dp),
+                    .padding(paddingValues),
             ) {
-                if (state.items.isEmpty()) {
+                // Show a subtle loading indicator at the top while loading (no full-screen overlay)
+                if (state.isLoading) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                }
+
+                if (!state.isLoading && state.items.isEmpty()) {
                     item {
                         Box(
                             modifier = Modifier
@@ -286,6 +310,7 @@ fun FileBrowserScreen(
                             } else if (item.isDirectory) {
                                 viewModel.navigateTo(item.path)
                             } else {
+                                // Navigate to file viewer — no special flags, keeps Explorer in back stack
                                 App.instance.navController().navigate(
                                     "${Routes.FILE_DETAIL_VIEWER}?url=${android.net.Uri.encode(item.path)}&category=file"
                                 )

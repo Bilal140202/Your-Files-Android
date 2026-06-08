@@ -1,6 +1,7 @@
 package com.yourfiles.manager.presentation.ui.pages
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,7 +23,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButtonDefaults.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -32,20 +32,25 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yourfiles.manager.app.App
+import com.yourfiles.manager.data.model.LocalFile
 import com.yourfiles.manager.presentation.ui.components.BackNavigationIconCompose
 import com.yourfiles.manager.presentation.ui.components.VideoPlayer
 import com.yourfiles.manager.presentation.ui.components.common.ImageViewer
 import com.yourfiles.manager.presentation.ui.components.common.PopupCompose
 import com.yourfiles.manager.presentation.ui.components.common.thumbnail.OtherFileThumbnailCompose
 import com.yourfiles.manager.presentation.vm.FileDetailViewerVM
+import com.yourfiles.manager.utils.getMimeType
 import com.yourfiles.manager.utils.isFileImage
 import com.yourfiles.manager.utils.isFileVideo
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,24 +60,56 @@ fun FileDetailViewerCompose(
     md5: String? = null,
     vm: FileDetailViewerVM = viewModel()
 ) {
-    LaunchedEffect(category, md5) {
-        if (category == "category_duplicates" && md5 != null) {
-            vm.loadFilesByMd5(md5)
+    // --- Direct file mode: when opening from file browser (category="file") ---
+    // Skip the database query entirely — build the file list from the filesystem path.
+    val isDirectFile = (category == "file")
+
+    // If direct file, build a single-item list from the file path
+    val directFiles = remember(filePath) {
+        if (isDirectFile) {
+            val file = File(filePath)
+            if (file.exists()) {
+                listOf(
+                    LocalFile(
+                        id = file.absolutePath,
+                        fileName = file.name,
+                        fileType = getMimeType(file.absolutePath),
+                        size = file.length(),
+                        modifiedTime = file.lastModified(),
+                        md5CheckSum = null,
+                    )
+                )
+            } else {
+                emptyList()
+            }
         } else {
-            vm.loadFilesByCategory(category)
+            null // null signals "use database loading"
         }
     }
 
-    val files by vm.categoryFiles.collectAsState()
-    val currentFiles = files
+    // Database loading only for non-direct categories
+    LaunchedEffect(category, md5) {
+        if (!isDirectFile) {
+            if (category == "category_duplicates" && md5 != null) {
+                vm.loadFilesByMd5(md5)
+            } else {
+                vm.loadFilesByCategory(category)
+            }
+        }
+    }
+
+    // Resolve current file list: direct files take priority over DB results
+    val dbFiles by vm.categoryFiles.collectAsState()
+    val currentFiles: List<LocalFile> = if (directFiles != null) directFiles else (dbFiles ?: emptyList())
 
     val pagerState = rememberPagerState(
         initialPage = 0,
-        pageCount = { currentFiles?.size ?: 0 }
+        pageCount = { currentFiles.size }
     )
 
+    // Scroll to the correct file in DB-backed pagers
     LaunchedEffect(currentFiles, filePath) {
-        if (!currentFiles.isNullOrEmpty()) {
+        if (!isDirectFile && currentFiles.isNotEmpty()) {
             val index = currentFiles.indexOfFirst { it.id == filePath }
             if (index != -1 && index != pagerState.currentPage) {
                 pagerState.animateScrollToPage(index)
@@ -85,13 +122,13 @@ fun FileDetailViewerCompose(
     val showDeleteDialog = remember { vm.showDeleteDialog }
     val isDeleting = remember { vm.isDeleting }
 
-    val currentFile = currentFiles?.getOrNull(pagerState.currentPage)
+    val currentFile = currentFiles.getOrNull(pagerState.currentPage)
 
     if (showDeleteDialog.value || isDeleting.value) {
         PopupCompose(show = true, onPopupDismissed = { if (!isDeleting.value) vm.cancelDelete() }) {
             AlertDialog(
                 onDismissRequest = { if (!isDeleting.value) vm.cancelDelete() },
-                title = { Text(if (isDeleting.value) "Deleting…" else "Delete File") },
+                title = { Text(if (isDeleting.value) "Deleting..." else "Delete File") },
                 text = {
                     if (isDeleting.value) {
                         Column(
@@ -100,7 +137,7 @@ fun FileDetailViewerCompose(
                             verticalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
                             CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                            Text("Please wait…")
+                            Text("Please wait...")
                         }
                     } else {
                         Text("Are you sure you want to delete ${currentFile?.fileName}? You will not be able to recover it.")
@@ -111,7 +148,7 @@ fun FileDetailViewerCompose(
                         TextButton(onClick = {
                             currentFile?.let { file ->
                                 vm.confirmDelete(file.id) {
-                                    if ((currentFiles?.size ?: 0) <= 1) navigator.navigateUp()
+                                    if (currentFiles.size <= 1) navigator.navigateUp()
                                 }
                             }
                         }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
@@ -152,9 +189,20 @@ fun FileDetailViewerCompose(
             )
         }
     ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-            if (currentFiles == null) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(Color.Black),
+            contentAlignment = Alignment.Center,
+        ) {
+            // No loading spinner — content appears instantly for direct files
+            if (currentFiles.isEmpty()) {
+                Text(
+                    text = "File not found",
+                    color = Color.White.copy(alpha = 0.6f),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
                 return@Scaffold
             }
 
@@ -165,7 +213,10 @@ fun FileDetailViewerCompose(
             ) { pageIndex ->
                 val file = currentFiles.getOrNull(pageIndex) ?: return@HorizontalPager
 
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier.fillMaxSize().background(Color.Black),
+                    contentAlignment = Alignment.Center,
+                ) {
                     when {
                         isFileImage(file.fileType) -> ImageViewer(file.id)
                         isFileVideo(file.fileType) -> VideoPlayer(file.id)
@@ -177,6 +228,7 @@ fun FileDetailViewerCompose(
                                     text = vm.getFileInfo(file),
                                     modifier = Modifier.padding(16.dp),
                                     fontSize = 18.sp,
+                                    color = Color.White,
                                 )
                             }
                         }

@@ -83,13 +83,22 @@ class FileExplorerViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun isAtRoot(): Boolean {
+        val current = _state.value.currentPath
+        val root = Environment.getExternalStorageDirectory().absolutePath
+        return current == root || current.isEmpty()
+    }
+
     fun navigateUp(): Boolean {
+        if (isAtRoot()) return false
         val current = File(_state.value.currentPath)
-        val parent = current.parentFile
-        return if (parent != null && parent.canRead()) {
+        val parent = current.parentFile ?: return false
+        if (parent.absolutePath == Environment.getExternalStorageDirectory().absolutePath ||
+            parent.canRead()) {
             navigateTo(parent.absolutePath)
-            true
-        } else false
+            return true
+        }
+        return false
     }
 
     fun toggleSelection(path: String) {
