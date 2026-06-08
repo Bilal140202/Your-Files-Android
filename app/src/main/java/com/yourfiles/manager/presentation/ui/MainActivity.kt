@@ -1,5 +1,6 @@
 package com.yourfiles.manager.presentation.ui
 
+import android.Manifest
 import android.Manifest.permission.READ_EXTERNAL_STORAGE
 import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
 import android.annotation.SuppressLint
@@ -32,19 +33,20 @@ import com.yourfiles.manager.BuildConfig
 import com.yourfiles.manager.app.App
 import com.yourfiles.manager.app.YourFilesApp
 import com.yourfiles.manager.helper.ReadFileWorker
-import com.yourfiles.manager.presentation.ui.pages.OnboardingPage
 import com.yourfiles.manager.presentation.ui.pages.PermissionRequiredComposable
+import android.util.Log
 
 
-@ExperimentalFoundationApi
+@OptIn(ExperimentalFoundationApi::class)
 class MainActivity : AppCompatActivity() {
 
     private lateinit var requestPermissionLauncher: ActivityResultLauncher<Intent>
+    private lateinit var requestMediaPermissionLauncher: ActivityResultLauncher<Array<String>>
 
     private val hasStoragePermissionState = mutableStateOf(false)
 
 
-    @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
+    @SuppressLint("UnusedMaterialScaffoldPaddingParameter", "UnusedMaterial3ScaffoldPaddingParameter")
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
@@ -55,14 +57,30 @@ class MainActivity : AppCompatActivity() {
             ActivityResultContracts.StartActivityForResult()
         ) { _ ->
             hasStoragePermissionState.value = isStoragePermissionGranted()
-
             if (hasStoragePermissionState.value) {
                 onStoragePermissionGranted()
             }
         }
 
+        requestMediaPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { permissions ->
+            val allGranted = permissions.entries.all { it.value }
+            if (allGranted) {
+                // Granular permissions granted, but we still need all-files on Android 11+
+                if (SDK_INT >= Build.VERSION_CODES.R) {
+                    if (Environment.isExternalStorageManager()) {
+                        onStoragePermissionGranted()
+                    }
+                } else {
+                    onStoragePermissionGranted()
+                }
+            }
+            hasStoragePermissionState.value = isStoragePermissionGranted()
+        }
+
         val prefs = getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
-        val onboardingShownState = mutableStateOf(prefs.getBoolean("onboarding_shown", false))
+        val onboardingShownState = mutableStateOf(prefs.getBoolean("onboarding_shown", true))
 
         setContent {
             val onboardingShown by onboardingShownState
@@ -76,10 +94,9 @@ class MainActivity : AppCompatActivity() {
 
             when {
                 !onboardingShown -> {
-                    OnboardingPage(onFinished = {
-                        prefs.edit().putBoolean("onboarding_shown", true).apply()
-                        onboardingShownState.value = true
-                    })
+                    // Skip onboarding for ES elegance - go straight to permission
+                    prefs.edit().putBoolean("onboarding_shown", true).apply()
+                    onboardingShownState.value = true
                 }
                 !hasStoragePermission -> {
                     PermissionRequiredComposable(
@@ -101,12 +118,17 @@ class MainActivity : AppCompatActivity() {
     private fun isStoragePermissionGranted(): Boolean {
         return if (SDK_INT >= Build.VERSION_CODES.R) {
             Environment.isExternalStorageManager()
+        } else if (SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Android 13+: granular media permissions
+            val images = ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES)
+            val video = ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_VIDEO)
+            val audio = ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_AUDIO)
+            images == PackageManager.PERMISSION_GRANTED &&
+                    video == PackageManager.PERMISSION_GRANTED &&
+                    audio == PackageManager.PERMISSION_GRANTED
         } else {
-            val result =
-                ActivityCompat.checkSelfPermission(this@MainActivity, READ_EXTERNAL_STORAGE)
-            val result1 = ActivityCompat.checkSelfPermission(
-                this@MainActivity, WRITE_EXTERNAL_STORAGE
-            )
+            val result = ActivityCompat.checkSelfPermission(this, READ_EXTERNAL_STORAGE)
+            val result1 = ActivityCompat.checkSelfPermission(this, WRITE_EXTERNAL_STORAGE)
             result == PackageManager.PERMISSION_GRANTED && result1 == PackageManager.PERMISSION_GRANTED
         }
     }
@@ -114,6 +136,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun seekStoragePermission() {
         if (SDK_INT >= Build.VERSION_CODES.R) {
+            // Android 11+: request MANAGE_EXTERNAL_STORAGE
             val intent: Intent = try {
                 val uri: Uri = Uri.parse("package:" + BuildConfig.APPLICATION_ID)
                 Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, uri)
@@ -123,6 +146,13 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             requestPermissionLauncher.launch(intent)
+        } else if (SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Android 13+: granular media permissions
+            requestMediaPermissionLauncher.launch(arrayOf(
+                Manifest.permission.READ_MEDIA_IMAGES,
+                Manifest.permission.READ_MEDIA_VIDEO,
+                Manifest.permission.READ_MEDIA_AUDIO,
+            ))
         } else {
             if (SDK_INT >= Build.VERSION_CODES.M) {
                 requestPermissions(arrayOf(WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE), 123)
@@ -133,11 +163,13 @@ class MainActivity : AppCompatActivity() {
 
 
     private fun onStoragePermissionGranted() {
+        Log.d("MainActivity", "Storage permission granted. Starting file scan.")
         val workManager = WorkManager.getInstance(applicationContext)
         workManager.enqueueUniqueWork(
             "file reader",
             ExistingWorkPolicy.REPLACE,
-            OneTimeWorkRequestBuilder<ReadFileWorker>().setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+            OneTimeWorkRequestBuilder<ReadFileWorker>()
+                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                 .addTag("abc").build(),
         )
     }

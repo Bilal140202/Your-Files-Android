@@ -2,6 +2,10 @@ package com.yourfiles.manager.app
 
 import android.app.Application
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.material3.DrawerState
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -18,6 +22,7 @@ import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 
 
 class App : Application() {
@@ -43,7 +48,6 @@ class App : Application() {
         initDB()
         initLibraries()
         SavedMemoryTracker.initialize()
-        // Clean up old trash on app start (fire and forget)
         CoroutineScope(Dispatchers.IO).launch {
             TrashManager.cleanupOldTrash(applicationContext)
         }
@@ -76,12 +80,22 @@ fun YourFilesApp(
     modifier: Modifier = Modifier,
     startDestination: String = Routes.HOME,
 ) {
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+
     com.yourfiles.manager.app.uim3.theme.AppTheme {
-        NavHost(
-            modifier = modifier,
-            navController = App.instance.navController(),
-            startDestination = startDestination,
-            builder = router
-        )
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            drawerContent = {
+                com.yourfiles.manager.presentation.ui.components.ESDrawerContent(drawerState)
+            },
+        ) {
+            NavHost(
+                modifier = modifier,
+                navController = App.instance.navController(),
+                startDestination = startDestination,
+                builder = buildAppGraph(drawerState, scope)
+            )
+        }
     }
 }
