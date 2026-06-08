@@ -5,7 +5,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -20,9 +19,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.outlined.CreateNewFolder
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Folder
@@ -41,9 +44,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -53,11 +58,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -66,8 +76,12 @@ import com.yourfiles.manager.app.App
 import com.yourfiles.manager.app.Routes
 import com.yourfiles.manager.domain.model.FileItem
 import com.yourfiles.manager.presentation.vm.FileExplorerViewModel
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, FlowPreview::class)
 @Composable
 fun FileBrowserScreen(
     initialPath: String? = null,
@@ -75,13 +89,20 @@ fun FileBrowserScreen(
     viewModel: FileExplorerViewModel = viewModel(),
 ) {
     val state by viewModel.state.collectAsState()
-    val context = LocalContext.current
 
     var showCreateFolderDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
 
-    // Scroll position preserved per path via a map of remembered states
+    // Search state
+    var isSearchActive by remember { mutableStateOf(false) }
+    var searchTextInput by remember { mutableStateOf("") } // raw TextField input
+    val searchFocusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    // Derived display list (filtered if searching)
+    val displayItems = state.displayItems
+
     val scrollState = rememberLazyListState()
 
     // Only apply nav argument on very first launch — never override SavedStateHandle
@@ -96,8 +117,33 @@ fun FileBrowserScreen(
         }
     }
 
-    // Back handler: go to parent folder when not at root
-    BackHandler(enabled = !viewModel.isAtRoot()) {
+    // Debounce: push raw search text to ViewModel after 150ms of inactivity
+    LaunchedEffect(Unit) {
+        snapshotFlow { searchTextInput }
+            .debounce(150)
+            .distinctUntilChanged()
+            .collect { query ->
+                viewModel.setSearchQuery(query)
+            }
+    }
+
+    // Auto-focus keyboard when search activates
+    LaunchedEffect(isSearchActive) {
+        if (isSearchActive) {
+            delay(100) // small delay for TextField to be laid out
+            searchFocusRequester.requestFocus()
+            keyboardController?.show()
+        }
+    }
+
+    // Back handler: close search first, then navigate up folders
+    BackHandler(enabled = isSearchActive) {
+        isSearchActive = false
+        searchTextInput = ""
+        viewModel.setSearchQuery("")
+        keyboardController?.hide()
+    }
+    BackHandler(enabled = !viewModel.isAtRoot() && !isSearchActive) {
         viewModel.navigateUp()
     }
 
@@ -149,83 +195,151 @@ fun FileBrowserScreen(
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface, // opaque bg — prevent ghost overlay
+        containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
-            TopAppBar(
-                title = {
-                    // Breadcrumb
-                    val segments = viewModel.getBreadcrumbSegments()
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        segments.forEachIndexed { index, (name, path) ->
-                            if (index > 0) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(14.dp),
-                                    tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f),
-                                )
-                            }
-                            TextButton(
-                                onClick = {
-                                    if (path != state.currentPath) {
-                                        viewModel.navigateTo(path)
-                                    }
-                                },
-                                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 0.dp),
-                            ) {
+            if (isSearchActive) {
+                // SEARCH MODE: inline search bar (ES 2014 style)
+                TopAppBar(
+                    title = {
+                        TextField(
+                            value = searchTextInput,
+                            onValueChange = { searchTextInput = it },
+                            placeholder = {
                                 Text(
-                                    text = name,
-                                    color = if (index == segments.lastIndex)
-                                        MaterialTheme.colorScheme.onPrimary
-                                    else
-                                        MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
-                                    style = if (index == segments.lastIndex)
-                                        MaterialTheme.typography.titleSmall
-                                    else
-                                        MaterialTheme.typography.bodySmall,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
+                                    "Search in ${viewModel.getCurrentFolderName()}",
+                                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f),
+                                )
+                            },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            keyboardActions = KeyboardActions(
+                                onSearch = { keyboardController?.hide() }
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(searchFocusRequester),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = MaterialTheme.colorScheme.onPrimary,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onPrimary,
+                                focusedBorderColor = Color.Transparent,
+                                unfocusedBorderColor = Color.Transparent,
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                cursorColor = MaterialTheme.colorScheme.onPrimary,
+                            ),
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                color = MaterialTheme.colorScheme.onPrimary,
+                            ),
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = {
+                            isSearchActive = false
+                            searchTextInput = ""
+                            viewModel.setSearchQuery("")
+                            keyboardController?.hide()
+                        }) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Close search",
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                            )
+                        }
+                    },
+                    actions = {
+                        if (searchTextInput.isNotEmpty()) {
+                            IconButton(onClick = {
+                                searchTextInput = ""
+                                viewModel.setSearchQuery("")
+                            }) {
+                                Icon(
+                                    Icons.Filled.Clear,
+                                    contentDescription = "Clear",
+                                    tint = MaterialTheme.colorScheme.onPrimary,
                                 )
                             }
                         }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onOpenDrawer) {
-                        Icon(
-                            Icons.Filled.Menu,
-                            contentDescription = "Drawer",
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                        )
-                    }
-                },
-                actions = {
-                    if (state.isMultiSelectMode) {
-                        IconButton(onClick = { showDeleteDialog = true }) {
-                            Icon(Icons.Outlined.Delete, "Delete", tint = MaterialTheme.colorScheme.onPrimary)
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                    ),
+                )
+            } else {
+                // NORMAL MODE: breadcrumb navigation
+                TopAppBar(
+                    title = {
+                        val segments = viewModel.getBreadcrumbSegments()
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            segments.forEachIndexed { index, (name, path) ->
+                                if (index > 0) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(14.dp),
+                                        tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f),
+                                    )
+                                }
+                                TextButton(
+                                    onClick = {
+                                        if (path != state.currentPath) {
+                                            viewModel.navigateTo(path)
+                                        }
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 2.dp, vertical = 0.dp),
+                                ) {
+                                    Text(
+                                        text = name,
+                                        color = if (index == segments.lastIndex)
+                                            MaterialTheme.colorScheme.onPrimary
+                                        else
+                                            MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
+                                        style = if (index == segments.lastIndex)
+                                            MaterialTheme.typography.titleSmall
+                                        else
+                                            MaterialTheme.typography.bodySmall,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
                         }
-                        TextButton(onClick = { viewModel.exitMultiSelect() }) {
-                            Text("Cancel", color = MaterialTheme.colorScheme.onPrimary)
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onOpenDrawer) {
+                            Icon(
+                                Icons.Filled.Menu,
+                                contentDescription = "Drawer",
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                            )
                         }
-                    } else {
-                        IconButton(onClick = {
-                            val items = state.items
-                            val firstSelected = items.firstOrNull()?.path ?: return@IconButton
-                        }) {
-                            Icon(Icons.Outlined.Search, "Search", tint = MaterialTheme.colorScheme.onPrimary)
+                    },
+                    actions = {
+                        if (state.isMultiSelectMode) {
+                            IconButton(onClick = { showDeleteDialog = true }) {
+                                Icon(Icons.Outlined.Delete, "Delete", tint = MaterialTheme.colorScheme.onPrimary)
+                            }
+                            TextButton(onClick = { viewModel.exitMultiSelect() }) {
+                                Text("Cancel", color = MaterialTheme.colorScheme.onPrimary)
+                            }
+                        } else {
+                            IconButton(onClick = {
+                                isSearchActive = true
+                            }) {
+                                Icon(Icons.Outlined.Search, "Search", tint = MaterialTheme.colorScheme.onPrimary)
+                            }
                         }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                ),
-            )
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                        actionIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
+                )
+            }
         },
         floatingActionButton = {
-            if (!state.isMultiSelectMode) {
+            if (!state.isMultiSelectMode && !isSearchActive) {
                 FloatingActionButton(
                     onClick = { showCreateFolderDialog = true },
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -236,7 +350,6 @@ fun FileBrowserScreen(
         }
     ) { paddingValues ->
         if (state.error != null) {
-            // Error state — shown only when there's an actual error
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -262,7 +375,6 @@ fun FileBrowserScreen(
                     .fillMaxSize()
                     .padding(paddingValues),
             ) {
-                // Show a subtle loading indicator at the top while loading (no full-screen overlay)
                 if (state.isLoading) {
                     item {
                         Box(
@@ -280,7 +392,7 @@ fun FileBrowserScreen(
                     }
                 }
 
-                if (!state.isLoading && state.items.isEmpty()) {
+                if (!state.isLoading && displayItems.isEmpty()) {
                     item {
                         Box(
                             modifier = Modifier
@@ -289,7 +401,7 @@ fun FileBrowserScreen(
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                text = "Empty folder",
+                                text = if (state.searchQuery.isNotEmpty()) "No matches" else "Empty folder",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -297,7 +409,7 @@ fun FileBrowserScreen(
                     }
                 }
 
-                items(state.items, key = { it.path }) { item ->
+                items(displayItems, key = { it.path }) { item ->
                     FileListItem(
                         item = item,
                         isSelected = state.selectedItems.contains(item.path),
@@ -309,8 +421,6 @@ fun FileBrowserScreen(
                             } else if (item.isDirectory) {
                                 viewModel.navigateTo(item.path)
                             } else {
-                                // Navigate to file viewer — plain navigate, no flags, keep Explorer in back stack
-                                // Do NOT use CLEAR_TOP, NEW_TASK, or SINGLE_TOP
                                 App.instance.navController().navigate(
                                     "${Routes.FILE_DETAIL_VIEWER}?url=${android.net.Uri.encode(item.path)}&category=file"
                                 )
@@ -360,7 +470,6 @@ private fun FileListItem(
             .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Checkbox in multi-select mode
         if (isMultiSelectMode) {
             Checkbox(
                 checked = isSelected,
@@ -370,7 +479,6 @@ private fun FileListItem(
             Spacer(modifier = Modifier.width(4.dp))
         }
 
-        // Icon
         Icon(
             imageVector = icon,
             contentDescription = null,
@@ -380,7 +488,6 @@ private fun FileListItem(
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        // Name
         Text(
             text = item.name,
             style = MaterialTheme.typography.bodyMedium,
@@ -390,7 +497,6 @@ private fun FileListItem(
             color = MaterialTheme.colorScheme.onSurface,
         )
 
-        // Size / count + date
         Column(
             horizontalAlignment = Alignment.End,
             modifier = Modifier.padding(end = 8.dp),

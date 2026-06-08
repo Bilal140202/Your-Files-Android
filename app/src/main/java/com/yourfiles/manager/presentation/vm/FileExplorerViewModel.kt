@@ -10,6 +10,7 @@ import com.yourfiles.manager.domain.model.FileItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
@@ -18,12 +19,25 @@ import java.util.Locale
 
 data class ExplorerState(
     val currentPath: String = "",
-    val items: List<FileItem> = emptyList(),
+    val items: List<FileItem> = emptyList(),        // full unfiltered list
+    val searchQuery: String = "",                   // active search filter
     val isLoading: Boolean = false,
     val error: String? = null,
     val selectedItems: Set<String> = emptySet(),
     val isMultiSelectMode: Boolean = false,
-)
+) {
+    /** Derive display list: filtered by searchQuery, folders first always. */
+    val displayItems: List<FileItem>
+        get() {
+            if (searchQuery.isEmpty()) return items
+            return items.filter {
+                it.name.contains(searchQuery, ignoreCase = true)
+            }.sortedWith(
+                compareByDescending<FileItem> { it.isDirectory }
+                    .thenBy { it.name.lowercase() }
+            )
+        }
+}
 
 class FileExplorerViewModel(
     app: Application,
@@ -69,6 +83,7 @@ class FileExplorerViewModel(
             error = null,
             selectedItems = emptySet(),
             isMultiSelectMode = false,
+            searchQuery = "", // clear search on folder change
         )
         if (saveState) {
             savedStateHandle[KEY_CURRENT_PATH] = path
@@ -111,6 +126,13 @@ class FileExplorerViewModel(
                 )
             }
         }
+    }
+
+    /**
+     * Update search query. Called from UI after 150ms debounce.
+     */
+    fun setSearchQuery(query: String) {
+        _state.value = _state.value.copy(searchQuery = query)
     }
 
     fun isAtRoot(): Boolean {
@@ -203,6 +225,11 @@ class FileExplorerViewModel(
             segments.add(parts[i] to buildPath)
         }
         return segments
+    }
+
+    /** Get the current folder name for search hint. */
+    fun getCurrentFolderName(): String {
+        return File(_state.value.currentPath).name.ifEmpty { "Internal Storage" }
     }
 
     fun formatDate(timestamp: Long): String {
