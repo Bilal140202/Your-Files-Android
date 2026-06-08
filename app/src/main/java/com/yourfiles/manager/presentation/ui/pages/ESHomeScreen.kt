@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.getSystemService
 import com.yourfiles.manager.app.Routes
+import com.yourfiles.manager.presentation.vm.CategoryType
 import java.io.File
 
 /** Storage volume info for home screen cards. */
@@ -73,7 +74,7 @@ private data class CategoryItem(
     val label: String,
     val icon: ImageVector,
     val color: Color,
-    val path: String,
+    val categoryType: CategoryType,
 )
 
 private data class ToolItem(
@@ -137,11 +138,11 @@ fun ESHomeScreen(
     val primaryPath = Environment.getExternalStorageDirectory().absolutePath
 
     val categories = listOf(
-        CategoryItem("Images", Icons.Outlined.Image, Color(0xFFE91E63), "$primaryPath/Pictures"),
-        CategoryItem("Videos", Icons.Outlined.Movie, Color(0xFF9C27B0), "$primaryPath/Movies"),
-        CategoryItem("Documents", Icons.Outlined.Description, Color(0xFF2196F3), "$primaryPath/Documents"),
-        CategoryItem("Music", Icons.Outlined.MusicNote, Color(0xFFFF9800), "$primaryPath/Music"),
-        CategoryItem("APKs", Icons.Outlined.Memory, Color(0xFF4CAF50), "$primaryPath/Download"),
+        CategoryItem("Images", Icons.Outlined.Image, Color(0xFFE91E63), CategoryType.IMAGES),
+        CategoryItem("Videos", Icons.Outlined.Movie, Color(0xFF9C27B0), CategoryType.VIDEOS),
+        CategoryItem("Documents", Icons.Outlined.Description, Color(0xFF2196F3), CategoryType.DOCUMENTS),
+        CategoryItem("Music", Icons.Outlined.MusicNote, Color(0xFFFF9800), CategoryType.AUDIO),
+        CategoryItem("APKs", Icons.Outlined.Memory, Color(0xFF4CAF50), CategoryType.APK),
     )
 
     val tools = listOf(
@@ -253,7 +254,9 @@ fun ESHomeScreen(
                         modifier = Modifier
                             .size(48.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .clickable { onNavigateToExplorer(cat.path) },
+                            .clickable {
+                                onNavigateToRoute("${Routes.MEDIA_STORE_CATEGORY}/${cat.categoryType.key}")
+                            },
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {

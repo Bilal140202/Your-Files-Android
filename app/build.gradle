@@ -116,4 +116,9 @@ dependencies {
     implementation "com.google.android.exoplayer:exoplayer-core:${exo_version}"
     implementation "com.google.android.exoplayer:exoplayer-dash:${exo_version}"
     implementation "com.google.android.exoplayer:exoplayer-ui:${exo_version}"
+
+    // Paging 3 for MediaStore category views
+    def paging_version = "3.3.6"
+    implementation "androidx.paging:paging-runtime:$paging_version"
+    implementation "androidx.paging:paging-compose:$paging_version"
 }

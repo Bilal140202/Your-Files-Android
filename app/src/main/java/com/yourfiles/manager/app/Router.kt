@@ -15,6 +15,7 @@ import com.yourfiles.manager.app.Routes.Companion.FLAT_SCREENSHOTS_FILE_MANAGER
 import com.yourfiles.manager.app.Routes.Companion.FLAT_VIDEOS_FILE_MANAGER
 import com.yourfiles.manager.app.Routes.Companion.FLAT_WHATSAPP_FILE_MANAGER
 import com.yourfiles.manager.app.Routes.Companion.HOME
+import com.yourfiles.manager.app.Routes.Companion.MEDIA_STORE_CATEGORY
 import com.yourfiles.manager.app.Routes.Companion.OPTIMISE_IMAGES
 import com.yourfiles.manager.app.Routes.Companion.SETTINGS
 import com.yourfiles.manager.app.Routes.Companion.TRASH
@@ -32,6 +33,8 @@ import com.yourfiles.manager.presentation.ui.pages.StorageAnalyzerScreen
 import com.yourfiles.manager.presentation.ui.pages.TrashPage
 import com.yourfiles.manager.presentation.ui.pages.WhatsAppCleanerPage
 import com.yourfiles.manager.presentation.ui.pages.FileDetailViewerCompose
+import com.yourfiles.manager.presentation.ui.pages.MediaStoreCategoryScreen
+import com.yourfiles.manager.presentation.vm.CategoryType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -101,6 +104,18 @@ fun buildAppGraph(
             }
         )
     }
+    composable(
+        route = "$MEDIA_STORE_CATEGORY/{categoryType}",
+        arguments = listOf(
+            navArgument("categoryType") {
+                type = NavType.StringType
+            }
+        )
+    ) { backStackEntry ->
+        val typeStr = backStackEntry.arguments?.getString("categoryType") ?: "images"
+        val categoryType = CategoryType.fromKey(typeStr)
+        MediaStoreCategoryScreen(categoryType = categoryType)
+    }
     composable(SETTINGS) {
         SettingsPage()
     }
@@ -138,5 +153,6 @@ interface Routes {
         const val TRASH = "/trash"
         const val SETTINGS = "/settings"
         const val ANALYZER = "/analyzer"
+        const val MEDIA_STORE_CATEGORY = "/media-category"
     }
 }
