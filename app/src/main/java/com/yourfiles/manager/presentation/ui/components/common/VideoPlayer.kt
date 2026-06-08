@@ -38,7 +38,7 @@ fun VideoPlayer(videoUrl: String) {
             player?.setMediaItem(mediaItem)
             player?.prepare()
             hideController()
-            player?.volume = 0f
+            player?.volume = 1f
             player?.videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
             player?.repeatMode = Player.REPEAT_MODE_ALL
             player?.playWhenReady = true
