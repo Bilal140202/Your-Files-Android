@@ -2,6 +2,9 @@ package com.yourfiles.manager.presentation.ui.pages
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -52,13 +55,9 @@ import com.yourfiles.manager.presentation.ui.components.common.PopupCompose
 import com.yourfiles.manager.presentation.ui.components.common.thumbnail.OtherFileThumbnailCompose
 import com.yourfiles.manager.presentation.vm.FileDetailViewerVM
 import com.yourfiles.manager.utils.getMimeType
-import com.yourfiles.manager.utils.isFileApk
 import com.yourfiles.manager.utils.isFileArchive
-import com.yourfiles.manager.utils.isFileAudio
 import com.yourfiles.manager.utils.isFileCode
 import com.yourfiles.manager.utils.isFileImage
-import com.yourfiles.manager.utils.isFileOffice
-import com.yourfiles.manager.utils.isFilePdf
 import com.yourfiles.manager.utils.isFileText
 import com.yourfiles.manager.utils.isFileVideo
 import java.io.File
@@ -231,75 +230,45 @@ fun FileDetailViewerCompose(
                     contentAlignment = Alignment.Center,
                 ) {
                     // ── Universal file type dispatcher ──
+                    // ES principle: images/video/text in-app, everything else → system
                     val mime = file.fileType
                     val filePath = file.id
                     when {
-                        // IMAGES (already works)
+                        // IMAGES — in-app viewer (works)
                         isFileImage(mime) -> ImageViewer(file.id)
 
-                        // VIDEO (already works)
+                        // VIDEO — in-app player (works)
                         isFileVideo(mime) -> VideoPlayer(file.id)
 
-                        // TEXT & CODE — txt, yaml, md, json, xml, csv, log, kt, py, java, etc.
+                        // TEXT & CODE — in-app monospace viewer
                         isFileText(mime) || isFileCode(filePath) ->
                             TextViewerScreen(filePath = filePath)
 
-                        // PDF — native in-app viewer with PdfRenderer
-                        isFilePdf(mime) -> PdfViewerScreen(filePath = filePath)
+                        // ZIP archives — in-app browser showing contents
+                        isFileArchive(mime) && isZipFile(filePath) ->
+                            ZipBrowserScreen(filePath = filePath)
 
-                        // APK — show package info + install button
-                        isFileApk(mime) -> ApkInfoScreen(filePath = filePath)
-
-                        // AUDIO — native in-app player with ExoPlayer
-                        isFileAudio(mime) -> AudioPlayerScreen(filePath = filePath)
-
-                        // ARCHIVE — zip, rar, 7z — open with system
-                        isFileArchive(mime) -> {
+                        // APK — direct system installer (no info page)
+                        mime == "application/vnd.android.package-archive" -> {
                             LaunchedEffect(filePath) {
-                                openWithSystem(context, filePath, mime)
+                                launchApkInstaller(context, filePath)
                             }
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 CircularProgressIndicator(color = Color.White)
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Text("Opening archive...", color = Color.White.copy(alpha = 0.7f))
+                                Text("Opening installer...", color = Color.White.copy(alpha = 0.7f))
                             }
                         }
 
-                        // OFFICE — doc, docx, xls, xlsx, ppt, pptx — system chooser
-                        isFileOffice(mime) -> {
-                            LaunchedEffect(filePath) {
-                                openWithSystem(context, filePath, mime)
-                            }
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                CircularProgressIndicator(color = Color.White)
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text("Opening...", color = Color.White.copy(alpha = 0.7f))
-                            }
-                        }
-
-                        // ANY OTHER MIME — try system viewer as last resort
-                        mime != null -> {
-                            LaunchedEffect(filePath) {
-                                openWithSystem(context, filePath, mime)
-                            }
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                CircularProgressIndicator(color = Color.White)
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text("Opening...", color = Color.White.copy(alpha = 0.7f))
-                            }
-                        }
-
-                        // FALLBACK — unknown type, show info only
+                        // EVERYTHING ELSE — system chooser (Always / This Time Only)
                         else -> {
+                            LaunchedEffect(filePath) {
+                                openWithSystemChooser(context, filePath, mime)
+                            }
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                OtherFileThumbnailCompose(filePath = file.fileName)
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(
-                                    text = vm.getFileInfo(file),
-                                    modifier = Modifier.padding(16.dp),
-                                    fontSize = 18.sp,
-                                    color = Color.White,
-                                )
+                                CircularProgressIndicator(color = Color.White)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text("Opening...", color = Color.White.copy(alpha = 0.7f))
                             }
                         }
                     }
@@ -322,12 +291,49 @@ fun FileDetailViewerCompose(
 }
 
 /**
- * Open a file with the system's Intent chooser.
- * Uses FileProvider for N+ to share file URI safely.
+ * Open APK with Android system package installer directly.
+ * Checks REQUEST_INSTALL_PACKAGES on Android 8+.
  */
-private fun openWithSystem(context: android.content.Context, filePath: String, mimeType: String?) {
+private fun launchApkInstaller(context: android.content.Context, filePath: String) {
     try {
         val file = File(filePath)
+        if (!file.exists()) return
+
+        // Android 8+: check install permission
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (!context.packageManager.canRequestPackageInstalls()) {
+                context.startActivity(
+                    Intent(
+                        Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                        Uri.parse("package:${context.packageName}")
+                    )
+                )
+                return
+            }
+        }
+
+        val uri = androidx.core.content.FileProvider.getUriForFile(
+            context, "${context.packageName}.provider", file
+        )
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "application/vnd.android.package-archive")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        Toast.makeText(context, "Cannot install APK: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+    }
+}
+
+/**
+ * Open any file with the system's Intent chooser.
+ * Shows Always / This Time Only dialog, exactly like ES File Explorer.
+ * Uses FileProvider for N+ to share file URI safely.
+ */
+private fun openWithSystemChooser(context: android.content.Context, filePath: String, mimeType: String?) {
+    val file = File(filePath)
+    try {
         if (!file.exists()) return
         val uri = androidx.core.content.FileProvider.getUriForFile(
             context, "${context.packageName}.provider", file
@@ -337,7 +343,15 @@ private fun openWithSystem(context: android.content.Context, filePath: String, m
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         context.startActivity(Intent.createChooser(intent, "Open with"))
+    } catch (e: android.content.ActivityNotFoundException) {
+        Toast.makeText(context, "No app found to open ${file.extension}", Toast.LENGTH_SHORT).show()
     } catch (_: Exception) {
-        // If no app can handle the file, do nothing — user sees the info fallback
     }
+}
+
+/** Check if file is a ZIP-based archive (zip only — rar/7z go to system). */
+private fun isZipFile(filePath: String): Boolean {
+    val dotIndex = filePath.lastIndexOf('.')
+    if (dotIndex < 0) return false
+    return filePath.substring(dotIndex + 1).lowercase() == "zip"
 }
