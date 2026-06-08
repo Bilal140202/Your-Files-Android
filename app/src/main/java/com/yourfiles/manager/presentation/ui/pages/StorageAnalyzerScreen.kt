@@ -1,6 +1,7 @@
 package com.yourfiles.manager.presentation.ui.pages
 
 import android.os.Environment
+import android.os.StatFs
 import android.text.format.Formatter
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material.icons.outlined.QuestionMark
+import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -61,6 +63,7 @@ import com.yourfiles.manager.app.App
 import com.yourfiles.manager.presentation.vm.AnalyzerUiState
 import com.yourfiles.manager.presentation.vm.StorageAnalyzerVM
 import com.yourfiles.manager.presentation.vm.StorageCategory
+import kotlin.math.roundToInt
 
 /** Colors for each storage category, ES 2014 style. */
 private val CATEGORY_COLORS = mapOf(
@@ -69,6 +72,7 @@ private val CATEGORY_COLORS = mapOf(
     StorageCategory.AUDIO to Color(0xFFFF9800),
     StorageCategory.DOCUMENTS to Color(0xFF2196F3),
     StorageCategory.APK to Color(0xFF4CAF50),
+    StorageCategory.ARCHIVES to Color(0xFF795548),
     StorageCategory.OTHER to Color(0xFF607D8B),
 )
 
@@ -78,6 +82,7 @@ private val CATEGORY_ICONS = mapOf(
     StorageCategory.AUDIO to Icons.Outlined.MusicNote,
     StorageCategory.DOCUMENTS to Icons.Outlined.Description,
     StorageCategory.APK to Icons.Outlined.Memory,
+    StorageCategory.ARCHIVES to Icons.Outlined.Archive,
     StorageCategory.OTHER to Icons.Outlined.QuestionMark,
 )
 
@@ -88,6 +93,7 @@ private val CATEGORY_FOLDERS = mapOf(
     StorageCategory.AUDIO to "Music",
     StorageCategory.DOCUMENTS to "Documents",
     StorageCategory.APK to "Download",
+    StorageCategory.ARCHIVES to "Download",
     StorageCategory.OTHER to null,
 )
 
@@ -142,6 +148,7 @@ fun StorageAnalyzerScreen(
                             modifier = Modifier.size(48.dp),
                             color = MaterialTheme.colorScheme.primary,
                             strokeWidth = 4.dp,
+                            progress = { state.scanProgress / 100f },
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
@@ -149,6 +156,15 @@ fun StorageAnalyzerScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        if (state.scanProgress > 0) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            val progressText = "${state.scanProgress}% \u00B7 ${String.format("%,d", state.scannedFileCount)} files"
+                            Text(
+                                text = progressText,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
             }
@@ -199,7 +215,7 @@ fun StorageAnalyzerScreen(
                     items(state.categories, key = { it.category.name }) { catStat ->
                         CategoryRow(
                             stats = catStat,
-                            totalUsed = state.totalUsedBytes,
+                            totalUsed = state.categories.sumOf { it.totalSize },
                             onClick = {
                                 val folder = CATEGORY_FOLDERS[catStat.category]
                                 if (folder != null) {
@@ -283,15 +299,15 @@ private fun DonutChartSection(state: AnalyzerUiState) {
                 }
             }
 
-            // Center text
+            // Center text — show categorized total (actual scanned data)
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = Formatter.formatShortFileSize(context, state.totalUsedBytes),
+                    text = Formatter.formatShortFileSize(context, totalCategorized),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    text = "Used",
+                    text = "Scanned",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -323,6 +339,37 @@ private fun DonutChartSection(state: AnalyzerUiState) {
                 }
             }
         }
+
+        // Storage summary: total / used / scanned
+        Spacer(modifier = Modifier.height(12.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+        ) {
+            val freeBytes = runCatching {
+                StatFs(Environment.getExternalStorageDirectory().absolutePath).availableBytes
+            }.getOrDefault(0L)
+            val totalCapacity = state.totalUsedBytes + freeBytes
+            StorageSummaryItem("Total", Formatter.formatShortFileSize(context, totalCapacity))
+            StorageSummaryItem("Used", Formatter.formatShortFileSize(context, state.totalUsedBytes))
+            StorageSummaryItem("Scanned", Formatter.formatShortFileSize(context, totalCategorized))
+        }
+    }
+}
+
+@Composable
+private fun StorageSummaryItem(label: String, value: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -338,7 +385,7 @@ private fun CategoryRow(
     val color = CATEGORY_COLORS[stats.category] ?: Color.Gray
     val icon = CATEGORY_ICONS[stats.category] ?: Icons.AutoMirrored.Outlined.InsertDriveFile
     val percentage = if (totalUsed > 0) {
-        (stats.totalSize * 100 / totalUsed).toInt()
+        ((stats.totalSize.toDouble() / totalUsed) * 100).roundToInt()
     } else 0
 
     Surface(
