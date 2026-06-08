@@ -250,17 +250,8 @@ fun FileDetailViewerCompose(
                         // APK — show package info + install button
                         isFileApk(mime) -> ApkInfoScreen(filePath = filePath)
 
-                        // AUDIO — open with system player
-                        isFileAudio(mime) -> {
-                            LaunchedEffect(filePath) {
-                                openWithSystem(context, filePath, mime)
-                            }
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                CircularProgressIndicator(color = Color.White)
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text("Opening audio player...", color = Color.White.copy(alpha = 0.7f))
-                            }
-                        }
+                        // AUDIO — native in-app player with ExoPlayer
+                        isFileAudio(mime) -> AudioPlayerScreen(filePath = filePath)
 
                         // ARCHIVE — zip, rar, 7z — open with system
                         isFileArchive(mime) -> {
