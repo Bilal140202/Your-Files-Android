@@ -39,6 +39,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.AutoFixHigh
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.outlined.ContentPasteGo
 import androidx.compose.material.icons.outlined.CreateNewFolder
@@ -61,6 +63,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -134,6 +138,9 @@ fun FileBrowserScreen(
     var showRenameDialog by remember { mutableStateOf(false) }
     var renamePath by remember { mutableStateOf("") }
     var renameInput by remember { mutableStateOf("") }
+
+    // 3-dot menu
+    var showTopMenu by remember { mutableStateOf(false) }
 
     // More bottom sheet
     var showMoreSheet by remember { mutableStateOf(false) }
@@ -540,12 +547,80 @@ fun FileBrowserScreen(
                         }
                     },
                     actions = {
+                        // Organiser button — opens organiser for CURRENT folder
+                        IconButton(onClick = {
+                            val currentDir = state.currentPath
+                            App.instance.navController().navigate("${Routes.FOLDER_ORGANISER}?path=${android.net.Uri.encode(currentDir)}")
+                        }) {
+                            Icon(
+                                Icons.Outlined.AutoFixHigh,
+                                contentDescription = "Organise",
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                            )
+                        }
+                        // Search button
                         IconButton(onClick = { isSearchActive = true }) {
                             Icon(
                                 Icons.Outlined.Search,
                                 contentDescription = "Search",
                                 tint = MaterialTheme.colorScheme.onPrimary,
                             )
+                        }
+                        // 3-dot overflow menu
+                        Box {
+                            IconButton(onClick = { showTopMenu = true }) {
+                                Icon(
+                                    Icons.Filled.MoreVert,
+                                    contentDescription = "More options",
+                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showTopMenu,
+                                onDismissRequest = { showTopMenu = false },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Refresh") },
+                                    onClick = {
+                                        showTopMenu = false
+                                        viewModel.navigateTo(state.currentPath)
+                                    },
+                                    leadingIcon = {
+                                        Icon(Icons.Outlined.Refresh, contentDescription = null)
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Storage Analyzer") },
+                                    onClick = {
+                                        showTopMenu = false
+                                        App.instance.navController().navigate(Routes.ANALYZER)
+                                    },
+                                    leadingIcon = {
+                                        Icon(Icons.Outlined.Folder, contentDescription = null)
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("New Folder") },
+                                    onClick = {
+                                        showTopMenu = false
+                                        showCreateFolderDialog = true
+                                    },
+                                    leadingIcon = {
+                                        Icon(Icons.Outlined.CreateNewFolder, contentDescription = null)
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Organise") },
+                                    onClick = {
+                                        showTopMenu = false
+                                        val currentDir = state.currentPath
+                                        App.instance.navController().navigate("${Routes.FOLDER_ORGANISER}?path=${android.net.Uri.encode(currentDir)}")
+                                    },
+                                    leadingIcon = {
+                                        Icon(Icons.Outlined.AutoFixHigh, contentDescription = null)
+                                    },
+                                )
+                            }
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(

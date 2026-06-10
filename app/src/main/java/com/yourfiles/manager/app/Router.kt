@@ -93,8 +93,18 @@ fun buildAppGraph(
     composable(FLAT_WHATSAPP_FILE_MANAGER) {
         WhatsAppCleanerPage()
     }
-    composable(Routes.FOLDER_ORGANISER) {
-        FolderOrganiserScreen()
+    composable(
+        route = "${Routes.FOLDER_ORGANISER}?path={path}",
+        arguments = listOf(
+            navArgument("path") {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            }
+        )
+    ) { backStackEntry ->
+        val path = backStackEntry.arguments?.getString("path")
+        FolderOrganiserScreen(initialPath = path)
     }
     composable(Routes.ANALYZER) {
         StorageAnalyzerScreen(

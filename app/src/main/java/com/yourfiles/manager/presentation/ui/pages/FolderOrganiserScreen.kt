@@ -115,12 +115,12 @@ data class OrganiseResult(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FolderOrganiserScreen() {
+fun FolderOrganiserScreen(initialPath: String? = null) {
     val scope = rememberCoroutineScope()
     val navigator = remember { App.instance.navController() }
 
     var folderPath by remember {
-        mutableStateOf(Environment.getExternalStorageDirectory().absolutePath + "/Download")
+        mutableStateOf(initialPath ?: Environment.getExternalStorageDirectory().absolutePath + "/Download")
     }
     var showFolderPicker by remember { mutableStateOf(false) }
     val checkedCategories = remember { mutableStateListOf<String>() }
@@ -197,7 +197,7 @@ fun FolderOrganiserScreen() {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Folder Organiser", fontWeight = FontWeight.Bold) },
+                title = { Text("Organise: ${File(folderPath).name}", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navigator.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
