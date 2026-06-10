@@ -468,7 +468,7 @@ private suspend fun organiseFolder(
     sourceDir: File,
     selectedCategories: Set<String>,
     existingFolders: Set<String>,
-    onProgress: (String) -> Unit,
+    onProgress: suspend (String) -> Unit,
 ): OrganiseResult = withContext(Dispatchers.IO) {
     if (!sourceDir.exists() || !sourceDir.isDirectory) {
         return@withContext OrganiseResult(0, 0, emptySet(), emptyList())
