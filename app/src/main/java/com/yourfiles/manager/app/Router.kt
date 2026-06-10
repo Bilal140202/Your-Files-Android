@@ -18,7 +18,6 @@ import com.yourfiles.manager.app.Routes.Companion.HOME
 import com.yourfiles.manager.app.Routes.Companion.MEDIA_STORE_CATEGORY
 import com.yourfiles.manager.app.Routes.Companion.OPTIMISE_IMAGES
 import com.yourfiles.manager.app.Routes.Companion.SETTINGS
-import com.yourfiles.manager.app.Routes.Companion.TRASH
 import com.yourfiles.manager.presentation.ui.components.ESDrawerContent
 import com.yourfiles.manager.presentation.ui.pages.ESHomeScreen
 import com.yourfiles.manager.presentation.ui.pages.FileBrowserScreen
@@ -30,9 +29,9 @@ import com.yourfiles.manager.presentation.ui.pages.FlatVideosFileManager
 import com.yourfiles.manager.presentation.ui.pages.ImageOptimiserPage
 import com.yourfiles.manager.presentation.ui.pages.SettingsPage
 import com.yourfiles.manager.presentation.ui.pages.StorageAnalyzerScreen
-import com.yourfiles.manager.presentation.ui.pages.TrashPage
 import com.yourfiles.manager.presentation.ui.pages.WhatsAppCleanerPage
 import com.yourfiles.manager.presentation.ui.pages.FileDetailViewerCompose
+import com.yourfiles.manager.presentation.ui.pages.FolderOrganiserScreen
 import com.yourfiles.manager.presentation.ui.pages.MediaStoreCategoryScreen
 import com.yourfiles.manager.presentation.vm.CategoryType
 import kotlinx.coroutines.CoroutineScope
@@ -94,8 +93,8 @@ fun buildAppGraph(
     composable(FLAT_WHATSAPP_FILE_MANAGER) {
         WhatsAppCleanerPage()
     }
-    composable(TRASH) {
-        TrashPage()
+    composable(Routes.FOLDER_ORGANISER) {
+        FolderOrganiserScreen()
     }
     composable(Routes.ANALYZER) {
         StorageAnalyzerScreen(
@@ -150,7 +149,7 @@ interface Routes {
         const val ONBOARDING = "/onboarding"
         const val OPTIMISE_IMAGES = "/optimise-images"
         const val FILE_DETAIL_VIEWER = "/file-detail-viewer"
-        const val TRASH = "/trash"
+        const val FOLDER_ORGANISER = "/folder-organiser"
         const val SETTINGS = "/settings"
         const val ANALYZER = "/analyzer"
         const val MEDIA_STORE_CATEGORY = "/media-category"

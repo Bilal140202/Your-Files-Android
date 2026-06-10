@@ -48,24 +48,24 @@ fun FlatFileManagerDeleteComposable(vm: SelectableDeletableVM, selectedSize: Lon
         PopupCompose(show = true, onPopupDismissed = { if (!isDeleting.value) vm.cancelDelete() }) {
             AlertDialog(
                 onDismissRequest = { if (!isDeleting.value) vm.cancelDelete() },
-                title = { Text(if (isDeleting.value) "Moving to Recycle Bin..." else "Move to Recycle Bin") },
+                title = { Text(if (isDeleting.value) "Deleting Files" else "Delete Files") },
                 text = {
                     if (isDeleting.value) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Moving ${selectedFiles.value.size} files to Recycle Bin, please wait...")
+                            Text("Deleting ${selectedFiles.value.size} files, please wait...")
                             Spacer(modifier = Modifier.height(16.dp))
                             CircularProgressIndicator(
                                 color = MaterialTheme.colorScheme.primary,
                             )
                         }
                     } else {
-                        Text("Move ${selectedFiles.value.size} files ($formattedSize) to the Recycle Bin? You can restore them later from the Trash.")
+                        Text("Are you sure you want to delete ${selectedFiles.value.size} files ($formattedSize)? This action cannot be undone.")
                     }
                 },
                 confirmButton = {
                     if (!isDeleting.value) {
                         TextButton(onClick = { vm.confirmDeleteFiles() }) {
-                            Text("Move to Bin", color = Color.Red)
+                            Text("Delete", color = Color.Red)
                         }
                     }
                 },

@@ -7,7 +7,6 @@ import com.yourfiles.manager.app.App
 import com.yourfiles.manager.data.repository.LocalFilesRepoImpl
 import com.yourfiles.manager.domain.interactors.FileUseCases
 import com.yourfiles.manager.utils.SavedMemoryTracker
-import com.yourfiles.manager.utils.TrashManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -21,8 +20,6 @@ open class SelectableDeletableVM : ViewModel() {
     val selectedFiles = mutableStateOf(setOf<String>())
     val showDeleteDialog = mutableStateOf(false)
     val isDeleting = mutableStateOf(false)
-    val showUndoSnackbar = mutableStateOf(false)
-    val lastTrashedEntries = mutableStateOf<Map<String, String>>(emptyMap())
 
     fun deleteFiles(ids: Set<String>) {
         showDeleteDialog.value = true
@@ -34,8 +31,14 @@ open class SelectableDeletableVM : ViewModel() {
             val totalBytes = pendingDeleteFiles.sumOf { File(it).length() }
             withContext(Dispatchers.Main) { isDeleting.value = true }
 
-            // Move to trash instead of permanent delete
-            val trashedEntries = TrashManager.moveToTrash(pendingDeleteFiles)
+            // Permanent delete
+            pendingDeleteFiles.forEach { path ->
+                val file = File(path)
+                if (file.exists()) {
+                    if (file.isDirectory) file.deleteRecursively()
+                    else file.delete()
+                }
+            }
 
             launch {
                 fileUseCases.deleteFiles(pendingDeleteFiles.toList())
@@ -47,22 +50,7 @@ open class SelectableDeletableVM : ViewModel() {
                 showDeleteDialog.value = false
                 selectedModeOn.value = false
                 isDeleting.value = false
-
-                // Show undo snackbar
-                if (trashedEntries.isNotEmpty()) {
-                    lastTrashedEntries.value = trashedEntries
-                    showUndoSnackbar.value = true
-                }
             }
-        }
-    }
-
-    fun undoDelete() {
-        showUndoSnackbar.value = false
-        viewModelScope.launch(Dispatchers.IO) {
-            val entries = lastTrashedEntries.value
-            TrashManager.undoTrash(entries)
-            lastTrashedEntries.value = emptyMap()
         }
     }
 

@@ -61,7 +61,6 @@ import com.yourfiles.manager.data.model.LocalFile
 import com.yourfiles.manager.presentation.ui.components.BackNavigationIconCompose
 import com.yourfiles.manager.presentation.ui.components.common.flatFileManager.FlatFileManagerDeleteComposable
 import com.yourfiles.manager.presentation.vm.SelectableDeletableVM
-import com.yourfiles.manager.utils.TrashManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -159,8 +158,14 @@ class WhatsAppCleanerVM : SelectableDeletableVM() {
             val totalBytes = filesToDelete.sumOf { File(it).length() }
             withContext(Dispatchers.Main) { isDeleting.value = true }
 
-            // Move to trash instead of permanent delete
-            TrashManager.moveToTrash(filesToDelete)
+            // Permanent delete
+            filesToDelete.forEach { path ->
+                val file = File(path)
+                if (file.exists()) {
+                    if (file.isDirectory) file.deleteRecursively()
+                    else file.delete()
+                }
+            }
 
             // Refresh scanned files (parent's DB delete is a no-op for WhatsApp files)
             scanMediaInternal()

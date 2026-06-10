@@ -83,24 +83,6 @@ fun FlatFileManager(vm: FlatDuplicatesFileManagerVM = viewModel()) {
     }
 
     val context = LocalContext.current
-    val trashMsg = context.getString(R.string.trash_deleted_moved)
-    val undoLabel = context.getString(R.string.trash_undo)
-
-    // Handle undo snackbar
-    LaunchedEffect(vm.showUndoSnackbar.value) {
-        if (vm.showUndoSnackbar.value) {
-            val result = snackbarHostState.showSnackbar(
-                message = trashMsg,
-                actionLabel = undoLabel,
-                duration = SnackbarDuration.Short,
-            )
-            when (result) {
-                SnackbarResult.ActionPerformed -> vm.undoDelete()
-                SnackbarResult.Dismissed -> { /* user dismissed, trash stays */ }
-            }
-            vm.showUndoSnackbar.value = false
-        }
-    }
 
     Scaffold(
         topBar = {
@@ -211,7 +193,7 @@ fun DeleteButtonBottomBar(vm: FlatDuplicatesFileManagerVM = viewModel()) {
                             )
                         }
                     } else {
-                        Text(stringResource(R.string.delete_files_confirmation_trash, selectedFileIds.value.size, formattedSize))
+                        Text("Are you sure you want to delete ${selectedFileIds.value.size} files ($formattedSize)?")
                     }
                 },
                 confirmButton = {

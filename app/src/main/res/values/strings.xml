@@ -71,7 +71,6 @@
     <string name="delete_files_title">Delete Files</string>
     <string name="deleting_files_title">Deleting Files</string>
     <string name="delete_files_confirmation">Are you sure you want to delete %1$d files (%2$s)? You will not be able to recover them.</string>
-    <string name="delete_files_confirmation_trash">Move %1$d files (%2$s) to Trash? You can undo within 5 seconds.</string>
     <string name="deleting_files_progress">Deleting %1$d files, please wait…</string>
 
     <!-- Duplicates -->
@@ -86,13 +85,6 @@
     <string name="nav_files">Files</string>
     <string name="nav_duplicates">Duplicates</string>
     <string name="nav_settings">Settings</string>
-
-    <!-- Trash / Safety -->
-    <string name="trash_title">Trash</string>
-    <string name="trash_empty">Trash is empty</string>
-    <string name="trash_deleted_moved">Moved to Trash</string>
-    <string name="trash_undo">Undo</string>
-    <string name="trash_keep_days">Files in trash are deleted after %d days</string>
 
     <!-- Storage Analyzer -->
     <string name="storage_analyzer">Storage Analyzer</string>

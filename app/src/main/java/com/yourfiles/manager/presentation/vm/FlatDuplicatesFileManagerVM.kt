@@ -10,7 +10,6 @@ import com.yourfiles.manager.data.repository.LocalFilesRepoImpl
 import com.yourfiles.manager.domain.interactors.BestFileSelector
 import com.yourfiles.manager.domain.interactors.FileUseCases
 import com.yourfiles.manager.utils.SavedMemoryTracker
-import com.yourfiles.manager.utils.TrashManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -25,8 +24,6 @@ class FlatDuplicatesFileManagerVM : ViewModel() {
     val showDeleteDialog = mutableStateOf(false)
     val isDeleting = mutableStateOf(false)
     val autoSelectResult = mutableStateOf<String?>(null)
-    val showUndoSnackbar = mutableStateOf(false)
-    val lastTrashedEntries = mutableStateOf<Map<String, String>>(emptyMap())
 
     private val fileUseCases =
         FileUseCases(LocalFilesRepoImpl(App.instance.db.localFilesDao()))
@@ -54,10 +51,6 @@ class FlatDuplicatesFileManagerVM : ViewModel() {
         }
     }
 
-    /**
-     * Auto-Select Best: Score files by quality/location and keep only the best,
-     * selecting all others for deletion.
-     */
     fun autoSelectBest() {
         viewModelScope.launch {
             val groups = duplicateFiles.value ?: return@launch
@@ -121,8 +114,7 @@ class FlatDuplicatesFileManagerVM : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             val sizeBytes = File(localFile.id).length()
             launch { fileUseCases.deleteFile(localFile.id) }.join()
-            // Move to recycle bin instead of permanent delete
-            TrashManager.moveToTrash(setOf(localFile.id))
+            File(localFile.id).apply { if (exists()) delete() }
             SavedMemoryTracker.addSavedBytes(sizeBytes)
             withContext(Dispatchers.Main) {
                 selectedFileIds.value -= localFile.id
@@ -141,8 +133,14 @@ class FlatDuplicatesFileManagerVM : ViewModel() {
             val totalBytes = pendingDeleteFiles.sumOf { File(it).length() }
             withContext(Dispatchers.Main) { isDeleting.value = true }
 
-            // Move to trash instead of permanent delete
-            val trashedEntries = TrashManager.moveToTrash(pendingDeleteFiles)
+            // Permanent delete
+            pendingDeleteFiles.forEach { path ->
+                val file = File(path)
+                if (file.exists()) {
+                    if (file.isDirectory) file.deleteRecursively()
+                    else file.delete()
+                }
+            }
 
             // Remove from database
             launch {
@@ -164,23 +162,7 @@ class FlatDuplicatesFileManagerVM : ViewModel() {
                 showDeleteDialog.value = false
                 pendingDeleteFiles = emptySet()
                 isDeleting.value = false
-
-                // Show undo snackbar
-                if (trashedEntries.isNotEmpty()) {
-                    lastTrashedEntries.value = trashedEntries
-                    showUndoSnackbar.value = true
-                }
             }
-        }
-    }
-
-    fun undoDelete() {
-        showUndoSnackbar.value = false
-        viewModelScope.launch(Dispatchers.IO) {
-            val entries = lastTrashedEntries.value
-            TrashManager.undoTrash(entries)
-            // Re-add files to database by triggering a rescan
-            lastTrashedEntries.value = emptyMap()
         }
     }
 

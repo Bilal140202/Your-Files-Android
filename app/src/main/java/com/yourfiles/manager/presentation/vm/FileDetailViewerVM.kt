@@ -7,7 +7,6 @@ import com.yourfiles.manager.data.model.LocalFile
 import com.yourfiles.manager.data.repository.LocalFilesRepoImpl
 import com.yourfiles.manager.domain.interactors.FileUseCases
 import com.yourfiles.manager.utils.SavedMemoryTracker
-import com.yourfiles.manager.utils.TrashManager
 import androidx.compose.runtime.mutableStateOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -59,9 +58,8 @@ class FileDetailViewerVM : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             withContext(Dispatchers.Main) { isDeleting.value = true }
             val sizeBytes = File(fileId).length()
-            // Move to recycle bin instead of permanent delete
-            TrashManager.moveToTrash(setOf(fileId))
             fileUseCases.deleteFile(fileId)
+            File(fileId).apply { if (exists()) delete() }
             SavedMemoryTracker.addSavedBytes(sizeBytes)
             withContext(Dispatchers.Main) {
                 isDeleting.value = false

@@ -21,7 +21,6 @@ import coil3.request.crossfade
 import coil3.video.VideoFrameDecoder
 import com.yourfiles.manager.data.db.AppDatabase
 import com.yourfiles.manager.utils.SavedMemoryTracker
-import com.yourfiles.manager.utils.TrashManager
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -52,9 +51,6 @@ class App : Application() {
         initDB()
         initLibraries()
         SavedMemoryTracker.initialize()
-        CoroutineScope(Dispatchers.IO).launch {
-            TrashManager.cleanupOldTrash(applicationContext)
-        }
     }
 
     private fun initDB() {
