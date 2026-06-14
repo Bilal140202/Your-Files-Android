@@ -27,7 +27,6 @@ import androidx.compose.material.icons.outlined.Analytics
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material.icons.outlined.Movie
@@ -150,7 +149,7 @@ fun ESHomeScreen(
         ToolItem("Cleaner", Icons.Outlined.CleaningServices, Routes.FLAT_DUPLICATES_FILE_MANAGER),
         ToolItem("Analyzer", Icons.Outlined.Analytics, Routes.ANALYZER),
         ToolItem("Optimise", Icons.Outlined.PhotoSizeSelectLarge, Routes.OPTIMISE_IMAGES),
-        ToolItem("Organiser", Icons.Outlined.FolderOpen, Routes.FOLDER_ORGANISER),
+        ToolItem("Recycle Bin", Icons.Outlined.DeleteOutline, Routes.FLAT_DUPLICATES_FILE_MANAGER),
     )
 
     // Detect all storage volumes

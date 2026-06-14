@@ -57,7 +57,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -67,8 +66,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-
-// ===== Data models =====
 
 data class OrganiseCategory(
     val key: String,
@@ -133,7 +130,6 @@ fun FolderOrganiserScreen(initialPath: String? = null) {
     var undoSeconds by remember { mutableIntStateOf(10) }
     var isUndoing by remember { mutableStateOf(false) }
 
-    // Safety: existing category sub-folders
     val existingCategoryFolders = remember(folderPath) {
         val dir = File(folderPath)
         if (!dir.exists() || !dir.isDirectory) return@remember emptySet<String>()
@@ -142,7 +138,6 @@ fun FolderOrganiserScreen(initialPath: String? = null) {
         }.toSet()
     }
 
-    // Count files per category
     LaunchedEffect(folderPath, checkedCategories.toSet()) {
         if (folderPath.isEmpty() || checkedCategories.isEmpty()) {
             fileCounts = emptyMap()
@@ -156,7 +151,6 @@ fun FolderOrganiserScreen(initialPath: String? = null) {
         isCounting = false
     }
 
-    // Undo countdown
     LaunchedEffect(showUndoTimer) {
         if (showUndoTimer) {
             undoSeconds = 10
@@ -214,7 +208,6 @@ fun FolderOrganiserScreen(initialPath: String? = null) {
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(paddingValues),
         ) {
-            // Folder selector
             item {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Select Folder", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
@@ -239,7 +232,6 @@ fun FolderOrganiserScreen(initialPath: String? = null) {
                 }
             }
 
-            // Safety warning
             if (existingCategoryFolders.isNotEmpty()) {
                 item {
                     Card(
@@ -258,12 +250,10 @@ fun FolderOrganiserScreen(initialPath: String? = null) {
                 }
             }
 
-            // Category checklist header
             item {
                 Text("Select Categories", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
             }
 
-            // Category items
             items(ORGANISE_CATEGORIES) { category ->
                 val isChecked = checkedCategories.contains(category.key)
                 val count = fileCounts[category.key] ?: 0
@@ -298,7 +288,6 @@ fun FolderOrganiserScreen(initialPath: String? = null) {
                 }
             }
 
-            // Organise button
             item {
                 val totalFiles = fileCounts.values.sum()
                 val canOrganise = checkedCategories.isNotEmpty() && totalFiles > 0 && !isOrganising
@@ -325,7 +314,6 @@ fun FolderOrganiserScreen(initialPath: String? = null) {
                 }
             }
 
-            // Result
             if (organiseResult != null) {
                 item {
                     Card(
@@ -365,7 +353,6 @@ fun FolderOrganiserScreen(initialPath: String? = null) {
         }
     }
 
-    // Folder picker dialog
     if (showFolderPicker) {
         FolderPickerDialog(
             initialPath = folderPath,
@@ -374,8 +361,6 @@ fun FolderOrganiserScreen(initialPath: String? = null) {
         )
     }
 }
-
-// ===== Folder Picker =====
 
 @Composable
 private fun FolderPickerDialog(
@@ -435,8 +420,6 @@ private fun FolderPickerDialog(
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
-
-// ===== Business logic =====
 
 private suspend fun countFilesInFolder(folderPath: String, selectedCategories: Set<String>): Map<String, Int> = withContext(Dispatchers.IO) {
     val dir = File(folderPath)

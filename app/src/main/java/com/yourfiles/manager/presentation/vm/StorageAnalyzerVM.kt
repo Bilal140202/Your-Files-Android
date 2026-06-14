@@ -14,44 +14,55 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.util.PriorityQueue
-import kotlin.math.roundToInt
 
-/** File category for storage breakdown. */
+// ===== Enums =====
+
+enum class AnalyzerPhase { HOME, SCANNING, RESULTS }
+
+enum class ScanOption(val label: String) {
+    LARGE_FILES("Large Files"),
+    REDUNDANT("Redundant"),
+    RECENTLY_CREATED("Recently Created"),
+    ALL_FILES("All Files"),
+    APP_FOLDERS("App Folders"),
+}
+
 enum class StorageCategory(val label: String) {
-    IMAGES("Images"),
+    IMAGES("Pictures"),
     VIDEOS("Videos"),
     AUDIO("Audio"),
     DOCUMENTS("Documents"),
     APK("APKs"),
     ARCHIVES("Archives"),
-    OTHER("Other"),
+    OTHER("Others"),
 }
 
-/** A single row in the category breakdown. */
+// ===== Data classes =====
+
 data class CategoryStats(
     val category: StorageCategory,
     val totalSize: Long,
     val fileCount: Int,
 )
 
-/** A row for top-largest-files list. */
-data class LargestFileEntry(
+data class FolderSizeEntry(
     val path: String,
     val name: String,
     val size: Long,
 )
 
-/** UI state for the Storage Analyzer screen. */
 data class AnalyzerUiState(
-    val isScanning: Boolean = true,
-    val scanProgress: Int = 0,          // 0–100 estimated progress
-    val scannedFileCount: Long = 0L,     // files processed so far
-    val totalUsedBytes: Long = 0L,       // StatFs total − free
+    val phase: AnalyzerPhase = AnalyzerPhase.HOME,
+    val scanProgress: Int = 0,
+    val scannedCount: Long = 0L,
+    val totalCapacity: Long = 0L,
+    val usedBytes: Long = 0L,
     val categories: List<CategoryStats> = emptyList(),
-    val topLargestFiles: List<LargestFileEntry> = emptyList(),
+    val folderSizes: List<FolderSizeEntry> = emptyList(),
     val error: String? = null,
 )
+
+// ===== ViewModel =====
 
 class StorageAnalyzerVM(app: Application) : AndroidViewModel(app) {
 
@@ -59,19 +70,14 @@ class StorageAnalyzerVM(app: Application) : AndroidViewModel(app) {
     val state: StateFlow<AnalyzerUiState> = _state.asStateFlow()
 
     private val rootPath = Environment.getExternalStorageDirectory().absolutePath
-
     private var scanJob: Job? = null
-
-    // Cache: keep results for 1 hour so returning to the screen is instant
     private var cacheTimestamp: Long = 0L
     private var cachedState: AnalyzerUiState? = null
 
-    init {
-        analyzeStorage()
-    }
+    val hasAllFilesAccess: Boolean
+        get() = Environment.isExternalStorageManager()
 
-    fun analyzeStorage() {
-        // Return cached result if less than 1 hour old
+    fun startAnalysis() {
         val now = System.currentTimeMillis()
         if (cachedState != null && (now - cacheTimestamp) < 3600_000L) {
             _state.value = cachedState!!
@@ -79,111 +85,104 @@ class StorageAnalyzerVM(app: Application) : AndroidViewModel(app) {
         }
 
         scanJob?.cancel()
-        _state.value = AnalyzerUiState(isScanning = true)
+        _state.value = AnalyzerUiState(phase = AnalyzerPhase.SCANNING)
         scanJob = viewModelScope.launch(Dispatchers.IO) {
             try {
                 val rootDir = File(rootPath)
                 if (!rootDir.exists() || !rootDir.isDirectory) {
-                    _state.value = _state.value.copy(isScanning = false, error = "Storage not accessible")
+                    _state.value = _state.value.copy(
+                        phase = AnalyzerPhase.HOME,
+                        error = "Storage not accessible",
+                    )
                     return@launch
                 }
 
                 val statFs = StatFs(rootPath)
-                val usedBytes = statFs.totalBytes - statFs.availableBytes
+                val totalCapacity = statFs.totalBytes
+                val usedBytes = totalCapacity - statFs.availableBytes
 
-                // Accumulators
-                val categorySizes = mutableMapOf<StorageCategory, Long>()
-                val categoryCounts = mutableMapOf<StorageCategory, Int>()
-                StorageCategory.entries.forEach { cat ->
-                    categorySizes[cat] = 0L
-                    categoryCounts[cat] = 0
-                }
-
-                // Top-10 largest files via min-heap
-                val largestHeap = PriorityQueue<LargestFileEntry>(11, compareBy { it.size })
+                val catSizes = StorageCategory.entries.associateWith { 0L }.toMutableMap()
+                val catCounts = StorageCategory.entries.associateWith { 0 }.toMutableMap()
+                val folderSizeMap = mutableMapOf<String, Long>()
 
                 var scannedCount = 0L
-                // Estimate total entries for progress (rough: count first-level items)
                 val rootChildren = rootDir.listFiles()?.filter { !it.name.startsWith(".") } ?: emptyList()
-                val estimatedMultiplier = 20  // heuristic: each top-level dir has ~20 descendants
-                val estimatedTotal = (rootChildren.size * estimatedMultiplier).toLong().coerceAtLeast(1000L)
+                val estimatedTotal = (rootChildren.size * 20).toLong().coerceAtLeast(1000L)
 
-                // Full recursive walk — no depth limit
                 rootDir.walkTopDown()
                     .onEnter { dir -> !dir.name.startsWith(".") }
                     .filter { it.isFile }
                     .forEach { file ->
                         val size = file.length()
                         val cat = categorize(file.name)
-                        categorySizes[cat] = (categorySizes[cat] ?: 0L) + size
-                        categoryCounts[cat] = (categoryCounts[cat] ?: 0) + 1
+                        catSizes[cat] = (catSizes[cat] ?: 0L) + size
+                        catCounts[cat] = (catCounts[cat] ?: 0) + 1
 
-                        // Maintain top-10 largest files
-                        if (largestHeap.size < 10) {
-                            largestHeap.add(LargestFileEntry(file.absolutePath, file.name, size))
-                        } else if (size > largestHeap.peek().size) {
-                            largestHeap.poll()
-                            largestHeap.add(LargestFileEntry(file.absolutePath, file.name, size))
+                        // Accumulate per top-level folder
+                        val relPath = file.absolutePath.removePrefix(rootPath).removePrefix("/")
+                        val firstSeg = relPath.split("/").firstOrNull() ?: ""
+                        if (firstSeg.isNotEmpty()) {
+                            folderSizeMap[firstSeg] = (folderSizeMap[firstSeg] ?: 0L) + size
                         }
 
                         scannedCount++
-                        // Update progress every 500 files to avoid excessive Main-thread posts
-                        if (scannedCount % 500 == 0L) {
-                            val progress = (scannedCount.toFloat() / estimatedTotal.coerceAtLeast(scannedCount).toFloat() * 100)
+                        if (scannedCount % 500L == 0L) {
+                            val pct = (scannedCount.toFloat()
+                                / estimatedTotal.coerceAtLeast(scannedCount) * 100)
                                 .toInt().coerceIn(0, 99)
                             withContext(Dispatchers.Main) {
                                 _state.value = _state.value.copy(
-                                    scanProgress = progress,
-                                    scannedFileCount = scannedCount,
+                                    scanProgress = pct,
+                                    scannedCount = scannedCount,
+                                    totalCapacity = totalCapacity,
+                                    usedBytes = usedBytes,
                                 )
                             }
                         }
                     }
 
-                // Sort largest descending
-                val topFiles = largestHeap.toList().sortedByDescending { it.size }
-
-                // Build category list sorted by size descending
                 val categories = StorageCategory.entries.map { cat ->
-                    CategoryStats(
-                        category = cat,
-                        totalSize = categorySizes[cat] ?: 0L,
-                        fileCount = categoryCounts[cat] ?: 0,
-                    )
+                    CategoryStats(cat, catSizes[cat] ?: 0L, catCounts[cat] ?: 0)
                 }.sortedByDescending { it.totalSize }
 
+                val folderSizes = folderSizeMap.entries
+                    .map { (name, size) -> FolderSizeEntry("$rootPath/$name", name, size) }
+                    .sortedByDescending { it.size }
+
                 val newState = AnalyzerUiState(
-                    isScanning = false,
+                    phase = AnalyzerPhase.RESULTS,
                     scanProgress = 100,
-                    scannedFileCount = scannedCount,
-                    totalUsedBytes = usedBytes,
+                    scannedCount = scannedCount,
+                    totalCapacity = totalCapacity,
+                    usedBytes = usedBytes,
                     categories = categories,
-                    topLargestFiles = topFiles,
+                    folderSizes = folderSizes,
                 )
 
-                // Cache
                 cachedState = newState
                 cacheTimestamp = System.currentTimeMillis()
-
                 _state.value = newState
 
-                Log.d("StorageAnalyzer",
-                    "Scan complete: $scannedCount files, " +
-                    "${categories.sumOf { it.fileCount }} categorized, " +
-                    "top file: ${topFiles.firstOrNull()?.name} (${topFiles.firstOrNull()?.size ?: 0})"
-                )
+                Log.d("Analyzer", "Done: $scannedCount files, ${folderSizes.size} folders")
             } catch (e: Exception) {
-                Log.e("StorageAnalyzer", "Analysis failed", e)
-                _state.value = _state.value.copy(isScanning = false, error = e.message)
+                Log.e("Analyzer", "Scan failed", e)
+                _state.value = _state.value.copy(
+                    phase = AnalyzerPhase.HOME,
+                    error = e.message,
+                )
             }
         }
     }
 
-    /** Categorize a file based on its extension. */
+    fun refresh() {
+        cachedState = null
+        startAnalysis()
+    }
+
     private fun categorize(filename: String): StorageCategory {
-        val dotIndex = filename.lastIndexOf('.')
-        if (dotIndex < 0) return StorageCategory.OTHER
-        val ext = filename.substring(dotIndex + 1).lowercase()
+        val dot = filename.lastIndexOf('.')
+        if (dot < 0) return StorageCategory.OTHER
+        val ext = filename.substring(dot + 1).lowercase()
         return when {
             ext in IMG_EXTS -> StorageCategory.IMAGES
             ext in VID_EXTS -> StorageCategory.VIDEOS
@@ -196,21 +195,31 @@ class StorageAnalyzerVM(app: Application) : AndroidViewModel(app) {
     }
 
     companion object {
-        private val IMG_EXTS = setOf(
+        val IMG_EXTS = setOf(
             "jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "heic", "heif", "raw", "tiff"
         )
-        private val VID_EXTS = setOf(
+        val VID_EXTS = setOf(
             "mp4", "mkv", "avi", "mov", "3gp", "flv", "wmv", "webm", "ts", "m4v"
         )
-        private val AUD_EXTS = setOf(
+        val AUD_EXTS = setOf(
             "mp3", "wav", "flac", "aac", "ogg", "wma", "m4a", "opus", "amr"
         )
-        private val DOC_EXTS = setOf(
+        val DOC_EXTS = setOf(
             "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
             "txt", "csv", "rtf", "html", "htm", "xml", "json",
         )
-        private val ARC_EXTS = setOf(
+        val ARC_EXTS = setOf(
             "zip", "rar", "7z", "tar", "gz", "bz2", "xz", "iso", "dmg"
         )
+
+        fun extensionsFor(category: StorageCategory): Set<String> = when (category) {
+            StorageCategory.IMAGES -> IMG_EXTS
+            StorageCategory.VIDEOS -> VID_EXTS
+            StorageCategory.AUDIO -> AUD_EXTS
+            StorageCategory.DOCUMENTS -> DOC_EXTS
+            StorageCategory.APK -> setOf("apk")
+            StorageCategory.ARCHIVES -> ARC_EXTS
+            StorageCategory.OTHER -> emptySet()
+        }
     }
 }

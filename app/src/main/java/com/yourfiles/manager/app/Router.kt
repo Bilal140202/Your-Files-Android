@@ -14,6 +14,7 @@ import com.yourfiles.manager.app.Routes.Companion.FLAT_LARGE_FILE_MANAGER
 import com.yourfiles.manager.app.Routes.Companion.FLAT_SCREENSHOTS_FILE_MANAGER
 import com.yourfiles.manager.app.Routes.Companion.FLAT_VIDEOS_FILE_MANAGER
 import com.yourfiles.manager.app.Routes.Companion.FLAT_WHATSAPP_FILE_MANAGER
+import com.yourfiles.manager.app.Routes.Companion.FOLDER_ORGANISER
 import com.yourfiles.manager.app.Routes.Companion.HOME
 import com.yourfiles.manager.app.Routes.Companion.MEDIA_STORE_CATEGORY
 import com.yourfiles.manager.app.Routes.Companion.OPTIMISE_IMAGES
@@ -33,7 +34,14 @@ import com.yourfiles.manager.presentation.ui.pages.WhatsAppCleanerPage
 import com.yourfiles.manager.presentation.ui.pages.FileDetailViewerCompose
 import com.yourfiles.manager.presentation.ui.pages.FolderOrganiserScreen
 import com.yourfiles.manager.presentation.ui.pages.MediaStoreCategoryScreen
+import com.yourfiles.manager.presentation.ui.pages.AnalyzerCategoryFilesScreen
+import com.yourfiles.manager.presentation.ui.pages.AnalyzerFolderSizesScreen
+import com.yourfiles.manager.presentation.ui.pages.AnalyzerDuplicatesScreen
+import com.yourfiles.manager.presentation.ui.pages.AnalyzerLargeFilesScreen
+import com.yourfiles.manager.presentation.ui.pages.AnalyzerJunkCleanerScreen
+import com.yourfiles.manager.presentation.ui.pages.AnalyzerRecentFilesScreen
 import com.yourfiles.manager.presentation.vm.CategoryType
+import com.yourfiles.manager.presentation.vm.StorageCategory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -94,7 +102,7 @@ fun buildAppGraph(
         WhatsAppCleanerPage()
     }
     composable(
-        route = "${Routes.FOLDER_ORGANISER}?path={path}",
+        route = "$FOLDER_ORGANISER?path={path}",
         arguments = listOf(
             navArgument("path") {
                 type = NavType.StringType
@@ -106,13 +114,46 @@ fun buildAppGraph(
         val path = backStackEntry.arguments?.getString("path")
         FolderOrganiserScreen(initialPath = path)
     }
+    // ===== Storage Analyzer + sub-screens =====
     composable(Routes.ANALYZER) {
-        StorageAnalyzerScreen(
-            onNavigateToExplorer = { path ->
-                App.instance.navController().navigate("${EXPLORER}?path=${Uri.encode(path)}")
+        StorageAnalyzerScreen()
+    }
+    composable(
+        route = "${Routes.ANALYZER_CATEGORY}?category={category}",
+        arguments = listOf(
+            navArgument("category") { type = NavType.StringType }
+        )
+    ) { backStackEntry ->
+        val catName = backStackEntry.arguments?.getString("category") ?: "OTHER"
+        val category = runCatching { StorageCategory.valueOf(catName) }.getOrDefault(StorageCategory.OTHER)
+        AnalyzerCategoryFilesScreen(category = category)
+    }
+    composable(
+        route = "${Routes.ANALYZER_FOLDERS}?path={path}",
+        arguments = listOf(
+            navArgument("path") {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
             }
         )
+    ) { backStackEntry ->
+        val path = backStackEntry.arguments?.getString("path")
+        AnalyzerFolderSizesScreen(initialPath = path)
     }
+    composable(Routes.ANALYZER_DUPLICATES) {
+        AnalyzerDuplicatesScreen()
+    }
+    composable(Routes.ANALYZER_LARGE) {
+        AnalyzerLargeFilesScreen()
+    }
+    composable(Routes.ANALYZER_JUNK) {
+        AnalyzerJunkCleanerScreen()
+    }
+    composable(Routes.ANALYZER_RECENT) {
+        AnalyzerRecentFilesScreen()
+    }
+    // ===== MediaStore category =====
     composable(
         route = "$MEDIA_STORE_CATEGORY/{categoryType}",
         arguments = listOf(
@@ -162,6 +203,12 @@ interface Routes {
         const val FOLDER_ORGANISER = "/folder-organiser"
         const val SETTINGS = "/settings"
         const val ANALYZER = "/analyzer"
+        const val ANALYZER_CATEGORY = "/analyzer/category"
+        const val ANALYZER_FOLDERS = "/analyzer/folders"
+        const val ANALYZER_DUPLICATES = "/analyzer/duplicates"
+        const val ANALYZER_LARGE = "/analyzer/large"
+        const val ANALYZER_JUNK = "/analyzer/junk"
+        const val ANALYZER_RECENT = "/analyzer/recent"
         const val MEDIA_STORE_CATEGORY = "/media-category"
     }
 }
