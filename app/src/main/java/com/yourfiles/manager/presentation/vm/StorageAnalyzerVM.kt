@@ -5,6 +5,10 @@ import android.os.Environment
 import android.os.StatFs
 import android.util.Log
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.SdStorage
+import androidx.compose.material.icons.outlined.DeleteSweep
+import androidx.compose.material.icons.outlined.Folder
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -252,7 +256,7 @@ class StorageAnalyzerVM(app: Application) : AndroidViewModel(app) {
                         CleanupSuggestion(
                             title = "$apkCount large APKs found",
                             description = "Total ${formatSize(apkTotalSize)} — consider removing installed APKs",
-                            icon = androidx.compose.material.icons.outlined.Memory,
+                            icon = Icons.Outlined.SdStorage,
                             targetPath = "$rootPath/Download",
                         )
                     )
@@ -263,7 +267,7 @@ class StorageAnalyzerVM(app: Application) : AndroidViewModel(app) {
                         CleanupSuggestion(
                             title = "$oldDownloadCount files in Downloads older than 30 days",
                             description = "Review and remove files you no longer need",
-                            icon = androidx.compose.material.icons.outlined.DeleteSweep,
+                            icon = Icons.Outlined.DeleteSweep,
                             targetPath = "$rootPath/Download",
                         )
                     )
@@ -274,7 +278,7 @@ class StorageAnalyzerVM(app: Application) : AndroidViewModel(app) {
                         CleanupSuggestion(
                             title = "Empty folders found: $emptyFolderCount",
                             description = "These folders contain no files and can be safely removed",
-                            icon = androidx.compose.material.icons.outlined.FolderDelete,
+                            icon = Icons.Outlined.Folder,
                             targetPath = rootPath,
                         )
                     )

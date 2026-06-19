@@ -17,7 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.outlined.ApkInstallation
+import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Folder
@@ -332,7 +332,7 @@ private fun getFileIconFor(item: OrganiserFileItem): ImageVector {
             FileCategory.VIDEOS -> Icons.Outlined.Movie
             FileCategory.AUDIO -> Icons.Outlined.MusicNote
             FileCategory.DOCUMENTS -> Icons.Outlined.Description
-            FileCategory.APK -> Icons.Outlined.ApkInstallation
+            FileCategory.APK -> Icons.Outlined.Android
             FileCategory.ARCHIVES -> Icons.Outlined.Archive
             FileCategory.OTHER -> Icons.Outlined.InsertDriveFile
         }

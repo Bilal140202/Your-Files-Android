@@ -5,7 +5,6 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.yourfiles.manager.utils.getMimeType
 import com.yourfiles.manager.utils.readIsOptimised
-import com.yourfiles.manager.utils.size
 import java.io.File
 
 @Entity
@@ -21,7 +20,7 @@ open class LocalFile(
 
 fun File.toLocalFile(md5: String?): LocalFile {
     return LocalFile(
-        getMimeType(absolutePath), lastModified(), name, size(), md5, absolutePath,
+        getMimeType(absolutePath), lastModified(), name, length(), md5, absolutePath,
         isOptimised = readIsOptimised()
     )
 }
