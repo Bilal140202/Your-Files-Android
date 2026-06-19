@@ -8,6 +8,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.yourfiles.manager.app.Routes.Companion.EXPLORER
 import com.yourfiles.manager.app.Routes.Companion.FILE_DETAIL_VIEWER
+import com.yourfiles.manager.app.Routes.Companion.FOLDER_ORGANISER
 import com.yourfiles.manager.app.Routes.Companion.FLAT_DUPLICATES_FILE_MANAGER
 import com.yourfiles.manager.app.Routes.Companion.FLAT_IMAGES_FILE_MANAGER
 import com.yourfiles.manager.app.Routes.Companion.FLAT_LARGE_FILE_MANAGER
@@ -33,6 +34,7 @@ import com.yourfiles.manager.presentation.ui.pages.StorageAnalyzerScreen
 import com.yourfiles.manager.presentation.ui.pages.TrashPage
 import com.yourfiles.manager.presentation.ui.pages.WhatsAppCleanerPage
 import com.yourfiles.manager.presentation.ui.pages.FileDetailViewerCompose
+import com.yourfiles.manager.presentation.ui.pages.FolderOrganiserScreen
 import com.yourfiles.manager.presentation.ui.pages.MediaStoreCategoryScreen
 import com.yourfiles.manager.presentation.vm.CategoryType
 import kotlinx.coroutines.CoroutineScope
@@ -120,6 +122,18 @@ fun buildAppGraph(
         SettingsPage()
     }
     composable(
+        route = "$FOLDER_ORGANISER?path={path}",
+        arguments = listOf(
+            navArgument("path") {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            }
+        )
+    ) {
+        FolderOrganiserScreen()
+    }
+    composable(
         "$FILE_DETAIL_VIEWER?url={url}&category={category}&md5={md5}",
         arguments = listOf(
             navArgument("url") { type = NavType.StringType },
@@ -140,7 +154,6 @@ interface Routes {
     companion object {
         const val HOME = "/home"
         const val EXPLORER = "/explorer"
-        const val FAVORITES = "/favorites"
         const val FLAT_DUPLICATES_FILE_MANAGER = "/flat-duplicates-file-manager"
         const val FLAT_IMAGES_FILE_MANAGER = "/flat-images-file-manager"
         const val FLAT_VIDEOS_FILE_MANAGER = "/flat-videos-file-manager"
@@ -154,5 +167,6 @@ interface Routes {
         const val SETTINGS = "/settings"
         const val ANALYZER = "/analyzer"
         const val MEDIA_STORE_CATEGORY = "/media-category"
+        const val FOLDER_ORGANISER = "/folder-organiser"
     }
 }

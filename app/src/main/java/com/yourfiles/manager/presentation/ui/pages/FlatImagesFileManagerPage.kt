@@ -1,7 +1,6 @@
 package com.yourfiles.manager.presentation.ui.pages
 
 import android.content.res.Configuration
-import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -34,7 +33,6 @@ fun FlatImagesFileManager(vm: FlatImagesFileManagerVM = viewModel()) {
     val selectedModeOn = remember { vm.selectedModeOn }
 
     val files by remember { vm.getImageFiles() }.collectAsState(initial = null)
-    Log.e("TAG", "FlatImagesFileManager: ", )
     val configuration = LocalConfiguration.current
     val columns = if (configuration.orientation == Configuration.ORIENTATION_PORTRAIT) 3 else 6
     val thumbnailSize = configuration.screenWidthDp.dp / columns
@@ -43,16 +41,20 @@ fun FlatImagesFileManager(vm: FlatImagesFileManagerVM = viewModel()) {
         TopAppBar(title = {
             Text(text = stringResource(R.string.category_large_images))
         }, actions = {
-
-            if (!selectedModeOn.value) TextButton(onClick = {
-                selectedModeOn.value = true
-            }) {
+            if (!selectedModeOn.value) TextButton(onClick = { selectedModeOn.value = true }) {
                 Text(stringResource(R.string.action_select))
-            }
-            else TextButton(onClick = {
-                selectedModeOn.value = false
-            }) {
-                Text(stringResource(R.string.action_cancel))
+            } else {
+                TextButton(onClick = {
+                    val allIds = files?.map { it.id }?.toSet() ?: emptySet()
+                    if (vm.selectedFiles.value.size == allIds.size) vm.selectedFiles.value = emptySet()
+                    else vm.selectedFiles.value = allIds
+                }) {
+                    Text(if ((files?.map { it.id }?.toSet() ?: emptySet()).size == vm.selectedFiles.value.size)
+                        stringResource(R.string.action_deselect_all) else stringResource(R.string.action_select_all))
+                }
+                TextButton(onClick = { selectedModeOn.value = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
             }
         }, navigationIcon = { BackNavigationIconCompose() })
     }, floatingActionButton = {

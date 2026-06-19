@@ -24,6 +24,21 @@ open class SelectableDeletableVM : ViewModel() {
     val showUndoSnackbar = mutableStateOf(false)
     val lastTrashedEntries = mutableStateOf<Map<String, String>>(emptyMap())
 
+    /** All current file IDs — subclasses should set this after loading. */
+    protected var allFileIds = emptySet<String>()
+
+    /** Toggle select all / deselect all files. */
+    fun toggleSelectAll() {
+        if (selectedFiles.value.size == allFileIds.size) {
+            selectedFiles.value = emptySet()
+        } else {
+            selectedFiles.value = allFileIds
+        }
+    }
+
+    /** True if all files are currently selected. */
+    val isAllSelected: Boolean get() = allFileIds.isNotEmpty() && selectedFiles.value.containsAll(allFileIds)
+
     fun deleteFiles(ids: Set<String>) {
         showDeleteDialog.value = true
         pendingDeleteFiles = ids

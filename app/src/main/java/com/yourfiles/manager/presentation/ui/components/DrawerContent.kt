@@ -81,7 +81,7 @@ fun ESDrawerContent(drawerState: DrawerState) {
         DrawerMenuItem("APKs", Icons.Outlined.Memory, path = "$primaryPath/Download"),
         DrawerMenuItem("", Icons.Outlined.Folder, isSection = true),
         DrawerMenuItem("Cleaner", Icons.Outlined.CleaningServices, route = Routes.FLAT_DUPLICATES_FILE_MANAGER),
-        DrawerMenuItem("Storage Analyzer", Icons.Outlined.Analytics, route = Routes.HOME),
+        DrawerMenuItem("Storage Analyzer", Icons.Outlined.Analytics, route = Routes.ANALYZER),
         DrawerMenuItem("Image Optimiser", Icons.Outlined.PhotoSizeSelectLarge, route = Routes.OPTIMISE_IMAGES),
         DrawerMenuItem("Recycle Bin", Icons.Outlined.DeleteOutline, route = Routes.TRASH),
         DrawerMenuItem("", Icons.Outlined.Folder, isSection = true),

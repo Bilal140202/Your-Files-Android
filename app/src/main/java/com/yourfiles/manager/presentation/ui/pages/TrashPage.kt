@@ -120,15 +120,7 @@ fun TrashPage() {
     LaunchedEffect(fileToRestore) {
         val file = fileToRestore ?: return@LaunchedEffect
         withContext(Dispatchers.IO) {
-            // Build a simple entry mapping using the file's name as a heuristic.
-            // The trash file is named "<timestamp>_<originalName>", so we try to
-            // reconstruct the original path from the trash file name.
-            val originalName = file.name.substringAfter("_", file.name)
-            val restored = TrashManager.undoTrash(mapOf(file.absolutePath to file.absolutePath))
-            if (restored == 0) {
-                // Fallback: just rename back, best-effort
-                file.delete()
-            }
+            TrashManager.restoreFile(file)
         }
         withContext(Dispatchers.Main) {
             isRestoring = false

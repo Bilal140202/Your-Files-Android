@@ -67,8 +67,8 @@ fun getMimeType(path: String): String? {
     }
 }
 
-// return file size in mb
-fun File.size(): Long {
+// return file size in KB
+fun File.sizeInKB(): Long {
     return length() / 1024
 }
 

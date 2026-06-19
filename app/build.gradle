@@ -22,10 +22,15 @@ android {
 
     signingConfigs {
         release {
-            storeFile file('../yourfiles-release.jks')
-            storePassword 'yourfiles123'
-            keyAlias 'yourfiles'
-            keyPassword 'yourfiles123'
+            def keystorePropsFile = rootProject.file("keystore.properties")
+            if (keystorePropsFile.exists()) {
+                def keystoreProps = new Properties()
+                keystoreProps.load(new FileInputStream(keystorePropsFile))
+                storeFile file(keystoreProps['storeFile'])
+                storePassword keystoreProps['storePassword']
+                keyAlias keystoreProps['keyAlias']
+                keyPassword keystoreProps['keyPassword']
+            }
         }
     }
     buildTypes {
@@ -106,11 +111,6 @@ dependencies {
     implementation "androidx.work:work-runtime-ktx:$work_version"
     implementation("androidx.concurrent:concurrent-futures-ktx:1.3.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
-
-    // Image loading library
-    implementation 'com.github.bumptech.glide:glide:5.0.5'
-    ksp "com.github.bumptech.glide:compiler:5.0.5"
-    implementation "com.github.bumptech.glide:compose:1.0.0-beta08"
 
     def exo_version = '2.19.1'
     implementation "com.google.android.exoplayer:exoplayer-core:${exo_version}"

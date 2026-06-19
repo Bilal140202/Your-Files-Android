@@ -1,6 +1,7 @@
 package com.yourfiles.manager.presentation.ui.pages
 
 import android.content.Intent
+import android.net.Uri
 import android.text.format.Formatter
 import android.util.Log
 import androidx.activity.compose.BackHandler
@@ -59,6 +60,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -142,6 +145,9 @@ fun FileBrowserScreen(
     // Info bottom sheet
     var showInfoSheet by remember { mutableStateOf(false) }
     var infoText by remember { mutableStateOf("") }
+
+    // Overflow menu state
+    var showOverflowMenu by remember { mutableStateOf(false) }
 
     val scrollState = rememberLazyListState()
 
@@ -547,6 +553,27 @@ fun FileBrowserScreen(
                                 tint = MaterialTheme.colorScheme.onPrimary,
                             )
                         }
+                        Box {
+                            IconButton(onClick = { showOverflowMenu = true }) {
+                                Icon(
+                                    Icons.Filled.MoreVert,
+                                    contentDescription = "More options",
+                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showOverflowMenu,
+                                onDismissRequest = { showOverflowMenu = false },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Organise") },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        App.instance.navController().navigate("${Routes.FOLDER_ORGANISER}?path=${Uri.encode(state.currentPath)}")
+                                    },
+                                )
+                            }
+                        }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.primary,
@@ -645,17 +672,36 @@ fun FileBrowserScreen(
 
                 if (!state.isLoading && displayItems.isEmpty()) {
                     item {
-                        Box(
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(32.dp),
-                            contentAlignment = Alignment.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
                         ) {
+                            Icon(
+                                imageVector = if (state.searchQuery.isNotEmpty())
+                                    Icons.Outlined.Search
+                                else
+                                    Icons.Outlined.Folder,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                text = if (state.searchQuery.isNotEmpty()) "No matches" else "Empty folder",
-                                style = MaterialTheme.typography.bodyMedium,
+                                text = if (state.searchQuery.isNotEmpty()) "No matches found" else "This folder is empty",
+                                style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
+                            if (state.searchQuery.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Try a different search term",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                )
+                            }
                         }
                     }
                 }

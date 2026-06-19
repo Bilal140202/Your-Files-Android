@@ -1,10 +1,8 @@
 package com.yourfiles.manager.presentation.ui.pages
 
 import android.os.Environment
-import android.os.StatFs
 import android.text.format.Formatter
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,19 +21,26 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
+import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material.icons.outlined.QuestionMark
-import androidx.compose.material.icons.outlined.Archive
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -51,7 +56,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -61,8 +65,13 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yourfiles.manager.app.App
 import com.yourfiles.manager.presentation.vm.AnalyzerUiState
+import com.yourfiles.manager.presentation.vm.CategoryStats
+import com.yourfiles.manager.presentation.vm.CleanupSuggestion
+import com.yourfiles.manager.presentation.vm.LargestFileEntry
+import com.yourfiles.manager.presentation.vm.RecentFileEntry
 import com.yourfiles.manager.presentation.vm.StorageAnalyzerVM
 import com.yourfiles.manager.presentation.vm.StorageCategory
+import java.io.File
 import kotlin.math.roundToInt
 
 /** Colors for each storage category, ES 2014 style. */
@@ -104,7 +113,6 @@ fun StorageAnalyzerScreen(
     viewModel: StorageAnalyzerVM = viewModel(),
 ) {
     val state by viewModel.state.collectAsState()
-    val context = LocalContext.current
     val primaryPath = Environment.getExternalStorageDirectory().absolutePath
 
     Scaffold(
@@ -197,12 +205,21 @@ fun StorageAnalyzerScreen(
                         .padding(paddingValues),
                     verticalArrangement = Arrangement.spacedBy(0.dp),
                 ) {
-                    // ── Donut Chart Section ────────────────────────────────────────
+
+                    // ═══════════════════════════════════════════════════════════════
+                    // STAGE 1: Overview Cards
+                    // ═══════════════════════════════════════════════════════════════
+                    item {
+                        OverviewCardsSection(state)
+                    }
+
+                    // ═══════════════════════════════════════════════════════════════
+                    // STAGE 2: Category Breakdown (Donut + Category List)
+                    // ═══════════════════════════════════════════════════════════════
                     item {
                         DonutChartSection(state)
                     }
 
-                    // ── Category Breakdown ──────────────────────────────────────────
                     item {
                         Text(
                             text = "Category Breakdown",
@@ -225,7 +242,9 @@ fun StorageAnalyzerScreen(
                         )
                     }
 
-                    // ── Top 10 Largest Files ───────────────────────────────────────
+                    // ═══════════════════════════════════════════════════════════════
+                    // STAGE 3: Top 20 Largest Files
+                    // ═══════════════════════════════════════════════════════════════
                     if (state.topLargestFiles.isNotEmpty()) {
                         item {
                             Spacer(modifier = Modifier.height(8.dp))
@@ -238,13 +257,104 @@ fun StorageAnalyzerScreen(
                         }
 
                         items(state.topLargestFiles, key = { it.path }) { entry ->
-                            LargestFileRow(entry)
+                            LargestFileRow(
+                                entry = entry,
+                                onClick = {
+                                    // Navigate to parent folder
+                                    val parent = File(entry.path).parent
+                                    if (parent != null) {
+                                        onNavigateToExplorer(parent)
+                                    }
+                                },
+                            )
+                        }
+                    }
+
+                    // ═══════════════════════════════════════════════════════════════
+                    // STAGE 4: Recently Added Files
+                    // ═══════════════════════════════════════════════════════════════
+                    if (state.recentFiles.isNotEmpty()) {
+                        item {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Recently Added",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            )
+                        }
+
+                        items(state.recentFiles, key = { it.path }) { entry ->
+                            RecentFileRow(
+                                entry = entry,
+                                onClick = {
+                                    val parent = File(entry.path).parent
+                                    if (parent != null) {
+                                        onNavigateToExplorer(parent)
+                                    }
+                                },
+                            )
+                        }
+                    }
+
+                    // ═══════════════════════════════════════════════════════════════
+                    // STAGE 5: Cleanup Suggestions
+                    // ═══════════════════════════════════════════════════════════════
+                    if (state.cleanupSuggestions.isNotEmpty()) {
+                        item {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Cleanup Suggestions",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            )
+                        }
+
+                        items(state.cleanupSuggestions, key = { it.title }) { suggestion ->
+                            CleanupSuggestionCard(
+                                suggestion = suggestion,
+                                onClick = {
+                                    if (suggestion.targetPath.isNotEmpty()) {
+                                        onNavigateToExplorer(suggestion.targetPath)
+                                    }
+                                },
+                            )
+                        }
+                    }
+
+                    // ═══════════════════════════════════════════════════════════════
+                    // STAGE 6: Rescan Button
+                    // ═══════════════════════════════════════════════════════════════
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Button(
+                                onClick = { viewModel.analyzeStorage() },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                ),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Refresh,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Rescan Storage")
+                            }
                         }
                     }
 
                     // Bottom padding
                     item {
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
                     }
                 }
             }
@@ -252,7 +362,130 @@ fun StorageAnalyzerScreen(
     }
 }
 
-// ===== DONUT CHART SECTION =====
+// ═══════════════════════════════════════════════════════════════════════════
+// STAGE 1: Overview Cards
+// ═══════════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun OverviewCardsSection(state: AnalyzerUiState) {
+    val context = LocalContext.current
+    val usageFraction = if (state.totalCapacityBytes > 0) {
+        state.totalUsedBytes.toFloat() / state.totalCapacityBytes.toFloat()
+    } else 0f
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+    ) {
+        // Three stat cards in a Row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            // Total Storage
+            StatCard(
+                modifier = Modifier.weight(1f),
+                label = "Total",
+                value = Formatter.formatShortFileSize(context, state.totalCapacityBytes),
+                color = MaterialTheme.colorScheme.primary,
+            )
+
+            // Used (with progress bar)
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                StatCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    label = "Used",
+                    value = Formatter.formatShortFileSize(context, state.totalUsedBytes),
+                    color = MaterialTheme.colorScheme.error,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                // Thin usage progress bar
+                LinearProgressIndicator(
+                    progress = { usageFraction },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp),
+                    color = when {
+                        usageFraction > 0.9f -> MaterialTheme.colorScheme.error
+                        usageFraction > 0.75f -> Color(0xFFFF9800)
+                        else -> MaterialTheme.colorScheme.primary
+                    },
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "${(usageFraction * 100).roundToInt()}% used",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 10.sp,
+                )
+            }
+
+            // Available
+            StatCard(
+                modifier = Modifier.weight(1f),
+                label = "Available",
+                value = Formatter.formatShortFileSize(context, state.availableBytes),
+                color = Color(0xFF4CAF50),
+            )
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // Scan summary
+        Text(
+            text = "Scanned ${String.format("%,d", state.scannedFileCount)} files",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
+private fun StatCard(
+    modifier: Modifier = Modifier,
+    label: String,
+    value: String,
+    color: Color,
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(
+            containerColor = color.copy(alpha = 0.08f),
+        ),
+        shape = RoundedCornerShape(12.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = color,
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STAGE 2: Donut Chart Section
+// ═══════════════════════════════════════════════════════════════════════════
 
 @Composable
 private fun DonutChartSection(state: AnalyzerUiState) {
@@ -339,45 +572,16 @@ private fun DonutChartSection(state: AnalyzerUiState) {
                 }
             }
         }
-
-        // Storage summary: total / used / scanned
-        Spacer(modifier = Modifier.height(12.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-        ) {
-            val freeBytes = runCatching {
-                StatFs(Environment.getExternalStorageDirectory().absolutePath).availableBytes
-            }.getOrDefault(0L)
-            val totalCapacity = state.totalUsedBytes + freeBytes
-            StorageSummaryItem("Total", Formatter.formatShortFileSize(context, totalCapacity))
-            StorageSummaryItem("Used", Formatter.formatShortFileSize(context, state.totalUsedBytes))
-            StorageSummaryItem("Scanned", Formatter.formatShortFileSize(context, totalCategorized))
-        }
     }
 }
 
-@Composable
-private fun StorageSummaryItem(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-// ===== CATEGORY ROW =====
+// ═══════════════════════════════════════════════════════════════════════════
+// STAGE 2: Category Row
+// ═══════════════════════════════════════════════════════════════════════════
 
 @Composable
 private fun CategoryRow(
-    stats: com.yourfiles.manager.presentation.vm.CategoryStats,
+    stats: CategoryStats,
     totalUsed: Long,
     onClick: () -> Unit,
 ) {
@@ -450,14 +654,21 @@ private fun CategoryRow(
     }
 }
 
-// ===== LARGEST FILE ROW =====
+// ═══════════════════════════════════════════════════════════════════════════
+// STAGE 3: Largest File Row
+// ═══════════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun LargestFileRow(entry: com.yourfiles.manager.presentation.vm.LargestFileEntry) {
+private fun LargestFileRow(
+    entry: LargestFileEntry,
+    onClick: () -> Unit,
+) {
     val context = LocalContext.current
 
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         color = MaterialTheme.colorScheme.surface,
     ) {
         Row(
@@ -502,5 +713,146 @@ private fun LargestFileRow(entry: com.yourfiles.manager.presentation.vm.LargestF
             )
         }
         HorizontalDivider(modifier = Modifier.padding(start = 52.dp))
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STAGE 4: Recent File Row
+// ═══════════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun RecentFileRow(
+    entry: RecentFileEntry,
+    onClick: () -> Unit,
+) {
+    val context = LocalContext.current
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        color = MaterialTheme.colorScheme.surface,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.InsertDriveFile,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp),
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = entry.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = getRelativeDate(entry.lastModified),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Text(
+                text = Formatter.formatShortFileSize(context, entry.size),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        HorizontalDivider(modifier = Modifier.padding(start = 52.dp))
+    }
+}
+
+/**
+ * Convert a timestamp to a human-readable relative date string.
+ */
+private fun getRelativeDate(timestamp: Long): String {
+    val now = System.currentTimeMillis()
+    val diffMs = now - timestamp
+    val diffDays = (diffMs / (24 * 60 * 60 * 1000L)).toInt()
+
+    return when {
+        diffDays == 0 -> "Today"
+        diffDays == 1 -> "Yesterday"
+        diffDays < 7 -> "$diffDays days ago"
+        else -> {
+            // Fallback to simple date
+            val sdf = java.text.SimpleDateFormat("MMM d", java.util.Locale.getDefault())
+            sdf.format(java.util.Date(timestamp))
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STAGE 5: Cleanup Suggestion Card
+// ═══════════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun CleanupSuggestionCard(
+    suggestion: CleanupSuggestion,
+    onClick: () -> Unit,
+) {
+    OutlinedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.outlinedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Icon(
+                imageVector = suggestion.icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp),
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = suggestion.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = suggestion.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // Chevron indicator
+            Text(
+                text = "\u203A", // single right-pointing angle quotation mark
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }

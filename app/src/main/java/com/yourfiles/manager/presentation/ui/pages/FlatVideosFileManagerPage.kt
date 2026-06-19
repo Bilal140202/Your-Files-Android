@@ -49,10 +49,22 @@ fun FlatVideosFileManager(vm: FlatVideosFileManagerVM = viewModel()) {
             }) {
                 Text(stringResource(R.string.action_select))
             }
-            else TextButton(onClick = {
-                selectedModeOn.value = false
-            }) {
-                Text(stringResource(R.string.action_cancel))
+            else {
+                TextButton(onClick = {
+                    val allIds = files.value?.map { it.id }?.toSet() ?: emptySet()
+                    if (vm.selectedFiles.value.size == allIds.size) vm.selectedFiles.value = emptySet()
+                    else vm.selectedFiles.value = allIds
+                }) {
+                    Text(
+                        if ((files.value?.map { it.id }?.toSet() ?: emptySet()).size == vm.selectedFiles.value.size)
+                            stringResource(R.string.action_deselect_all)
+                        else
+                            stringResource(R.string.action_select_all)
+                    )
+                }
+                TextButton(onClick = { selectedModeOn.value = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
             }
         }, navigationIcon = { BackNavigationIconCompose() })
     }, floatingActionButton = {
