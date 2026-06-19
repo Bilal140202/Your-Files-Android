@@ -172,16 +172,11 @@ fun FolderOrganiserScreen(
             } else {
                 val displayItems = state.displayItems
                 if (displayItems.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = "Empty folder",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                    com.yourfiles.manager.presentation.ui.components.common.EmptyStateView(
+                        icon = androidx.compose.material.icons.outlined.FolderOff,
+                        title = "Empty folder",
+                        subtitle = "No files to organise",
+                    )
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),

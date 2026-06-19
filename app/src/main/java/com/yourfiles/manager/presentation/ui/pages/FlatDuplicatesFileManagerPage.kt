@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -63,6 +64,7 @@ import com.yourfiles.manager.app.thumbnailSize
 import com.yourfiles.manager.data.model.LocalFile
 import com.yourfiles.manager.presentation.ui.components.BackNavigationIconCompose
 import com.yourfiles.manager.presentation.ui.components.SelectableFileItem
+import com.yourfiles.manager.presentation.ui.components.common.EmptyStateView
 import com.yourfiles.manager.presentation.ui.components.common.PopupCompose
 import com.yourfiles.manager.presentation.vm.FlatDuplicatesFileManagerVM
 import kotlinx.coroutines.launch
@@ -239,16 +241,26 @@ fun FileListView(vm: FlatDuplicatesFileManagerVM = viewModel()) {
         vm.selectDuplicateFiles()
     }
 
-    if (list.value == null) {
+    val duplicateMap = list.value
+    if (duplicateMap == null) {
         DuplicatesShimmer()
         return
     }
 
+    if (duplicateMap.isEmpty()) {
+        EmptyStateView(
+            icon = Icons.Outlined.SearchOff,
+            title = "No duplicates found",
+            subtitle = "All your files are unique",
+        )
+        return
+    }
+
     LazyColumn {
-        items(list.value!!.keys.size) {
-            val key = list.value!!.keys.toList()[it]
+        items(duplicateMap.keys.size) {
+            val key = duplicateMap.keys.toList()[it]
             key(key) {
-                DuplicateGroupCard(list.value!![key]!!)
+                DuplicateGroupCard(duplicateMap[key]!!)
             }
         }
     }
