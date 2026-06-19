@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.Archive
+import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Image
@@ -173,7 +174,7 @@ fun FolderOrganiserScreen(
                 val displayItems = state.displayItems
                 if (displayItems.isEmpty()) {
                     com.yourfiles.manager.presentation.ui.components.common.EmptyStateView(
-                        icon = androidx.compose.material.icons.outlined.FolderOff,
+                        icon = Icons.Outlined.FolderOpen,
                         title = "Empty folder",
                         subtitle = "No files to organise",
                     )
