@@ -6,6 +6,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.yourfiles.manager.app.Routes.Companion.APK_INFO
 import com.yourfiles.manager.app.Routes.Companion.EXPLORER
 import com.yourfiles.manager.app.Routes.Companion.FILE_DETAIL_VIEWER
 import com.yourfiles.manager.app.Routes.Companion.FOLDER_ORGANISER
@@ -35,6 +36,7 @@ import com.yourfiles.manager.presentation.ui.pages.TrashPage
 import com.yourfiles.manager.presentation.ui.pages.WhatsAppCleanerPage
 import com.yourfiles.manager.presentation.ui.pages.FileDetailViewerCompose
 import com.yourfiles.manager.presentation.ui.pages.FolderOrganiserScreen
+import com.yourfiles.manager.presentation.ui.pages.ApkInfoScreen
 import com.yourfiles.manager.presentation.ui.pages.MediaStoreCategoryScreen
 import com.yourfiles.manager.presentation.vm.CategoryType
 import kotlinx.coroutines.CoroutineScope
@@ -134,6 +136,21 @@ fun buildAppGraph(
         FolderOrganiserScreen()
     }
     composable(
+        route = "$APK_INFO?filePath={filePath}",
+        arguments = listOf(
+            navArgument("filePath") {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            }
+        )
+    ) { backStackEntry ->
+        val filePath = backStackEntry.arguments?.getString("filePath")
+        if (filePath != null) {
+            ApkInfoScreen(filePath = Uri.decode(filePath))
+        }
+    }
+    composable(
         "$FILE_DETAIL_VIEWER?url={url}&category={category}&md5={md5}",
         arguments = listOf(
             navArgument("url") { type = NavType.StringType },
@@ -160,12 +177,12 @@ interface Routes {
         const val FLAT_LARGE_FILE_MANAGER = "/flat-large-file-manager"
         const val FLAT_SCREENSHOTS_FILE_MANAGER = "/flat-screenshots-file-manager"
         const val FLAT_WHATSAPP_FILE_MANAGER = "/flat-whatsapp-file-manager"
-        const val ONBOARDING = "/onboarding"
         const val OPTIMISE_IMAGES = "/optimise-images"
         const val FILE_DETAIL_VIEWER = "/file-detail-viewer"
         const val TRASH = "/trash"
         const val SETTINGS = "/settings"
         const val ANALYZER = "/analyzer"
+        const val APK_INFO = "/apk-info"
         const val MEDIA_STORE_CATEGORY = "/media-category"
         const val FOLDER_ORGANISER = "/folder-organiser"
     }

@@ -79,11 +79,7 @@ class MainActivity : AppCompatActivity() {
             hasStoragePermissionState.value = isStoragePermissionGranted()
         }
 
-        val prefs = getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
-        val onboardingShownState = mutableStateOf(prefs.getBoolean("onboarding_shown", true))
-
         setContent {
-            val onboardingShown by onboardingShownState
             val hasStoragePermission by hasStoragePermissionState
 
             LaunchedEffect(hasStoragePermission) {
@@ -93,11 +89,6 @@ class MainActivity : AppCompatActivity() {
             }
 
             when {
-                !onboardingShown -> {
-                    // Skip onboarding for ES elegance - go straight to permission
-                    prefs.edit().putBoolean("onboarding_shown", true).apply()
-                    onboardingShownState.value = true
-                }
                 !hasStoragePermission -> {
                     PermissionRequiredComposable(
                         onRequestPermission = { seekStoragePermission() },

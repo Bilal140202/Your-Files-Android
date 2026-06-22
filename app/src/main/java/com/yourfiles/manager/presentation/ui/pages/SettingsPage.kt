@@ -1,6 +1,8 @@
 package com.yourfiles.manager.presentation.ui.pages
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -43,7 +46,6 @@ import com.yourfiles.manager.presentation.ui.components.BackNavigationIconCompos
 
 private const val PREFS_NAME = "yourfiles_settings"
 private const val KEY_CONFIRM_BEFORE_DELETE = "confirm_before_delete"
-private const val KEY_DARK_MODE = "dark_mode"
 
 /**
  * Settings page for the Your Files app.
@@ -118,17 +120,7 @@ fun SettingsPage() {
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                 ),
             ) {
-                SettingsSwitchRow(
-                    icon = Icons.Outlined.DarkMode,
-                    title = "Dark Mode",
-                    subtitle = when {
-                        systemDarkMode -> "Currently active (following system)"
-                        else -> "Currently inactive (following system)"
-                    },
-                    checked = systemDarkMode,
-                    onCheckedChange = { /* Follows system – read only */ },
-                    enabled = false,
-                )
+                SettingsDarkModeRow(systemDarkMode = systemDarkMode)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -167,7 +159,14 @@ fun SettingsPage() {
                 SettingsInfoRow(
                     icon = Icons.Outlined.Shield,
                     title = "Privacy Policy",
-                    description = "No data collected, all processing on-device"
+                    description = "No data collected, all processing on-device",
+                    onClick = {
+                        val intent = Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse("https://bilal140202.github.io/Your-Files-Android/privacy-policy.html")
+                        )
+                        context.startActivity(intent)
+                    }
                 )
             }
 
@@ -253,14 +252,55 @@ private fun SettingsSwitchRow(
 }
 
 @Composable
-private fun SettingsInfoRow(
-    icon: ImageVector,
-    title: String,
-    description: String,
+private fun SettingsDarkModeRow(
+    systemDarkMode: Boolean,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.DarkMode,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(end = 16.dp),
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Dark Mode",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = "Follows system setting",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Text(
+            text = if (systemDarkMode) "On (system)" else "Off (system)",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun SettingsInfoRow(
+    icon: ImageVector,
+    title: String,
+    description: String,
+    onClick: (() -> Unit)? = null,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
+            )
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.Top,
     ) {
