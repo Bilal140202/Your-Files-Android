@@ -76,10 +76,14 @@ fun TrashPage() {
     var fileToRestore by remember { mutableStateOf<File?>(null) }
 
     // Load trash files on first composition and after any mutation
-    fun reloadTrash() {
+    // Must be a suspend function to avoid blocking the composition thread with file I/O
+    suspend fun reloadTrash() {
         isLoading = true
-        trashFiles = TrashManager.getTrashFiles(context)
-            .sortedByDescending { it.lastModified() }
+        val files = withContext(Dispatchers.IO) {
+            TrashManager.getTrashFiles(context)
+                .sortedByDescending { it.lastModified() }
+        }
+        trashFiles = files
         isLoading = false
     }
 

@@ -70,6 +70,9 @@ class MediaStoreCategoryVM(
     }
 
     /** Load all items from MediaStore on IO thread, update state on Main. */
+    @Suppress("DEPRECATION") // MediaColumns.DATA is deprecated on Android 10+, but the app
+    // holds MANAGE_EXTERNAL_STORAGE which grants all-files access, so DATA remains the most
+    // pragmatic way to resolve file paths. Future migration should use ContentUris + ContentResolver.
     private fun loadMedia() {
         viewModelScope.launch(Dispatchers.IO) {
             try {

@@ -17,11 +17,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
 class FlatDuplicatesFileManagerVM : ViewModel() {
 
     val selectedFileIds = mutableStateOf(setOf<String>())
-    val uncheckedFiles = mutableSetOf<String>()
+    val uncheckedFiles = ConcurrentHashMap.newKeySet<String>()
     val showDeleteDialog = mutableStateOf(false)
     val isDeleting = mutableStateOf(false)
     val autoSelectResult = mutableStateOf<String?>(null)

@@ -129,7 +129,7 @@ fun FileDetailViewerCompose(
     }
 
     val infoPopUpVisibility = remember { mutableStateOf(false) }
-    val navigator = remember { App.instance.navController() }
+    val navigator = App.instance.navController()
     val showDeleteDialog = remember { vm.showDeleteDialog }
     val isDeleting = remember { vm.isDeleting }
     val context = LocalContext.current
@@ -140,7 +140,7 @@ fun FileDetailViewerCompose(
         PopupCompose(show = true, onPopupDismissed = { if (!isDeleting.value) vm.cancelDelete() }) {
             AlertDialog(
                 onDismissRequest = { if (!isDeleting.value) vm.cancelDelete() },
-                title = { Text(if (isDeleting.value) "Moving to Recycle Bin..." else "Move to Recycle Bin") },
+                title = { Text(if (isDeleting.value) "Moving to Trash..." else "Move to Trash") },
                 text = {
                     if (isDeleting.value) {
                         Column(
@@ -152,7 +152,7 @@ fun FileDetailViewerCompose(
                             Text("Please wait...")
                         }
                     } else {
-                        Text("Move \"${currentFile?.fileName}\" to the Recycle Bin? You can restore it later from the Trash.")
+                        Text("Move \"${currentFile?.fileName}\" to the Trash? You can restore it later from the Trash.")
                     }
                 },
                 confirmButton = {

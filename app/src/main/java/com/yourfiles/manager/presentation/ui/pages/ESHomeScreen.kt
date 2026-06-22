@@ -149,7 +149,7 @@ fun ESHomeScreen(
         ToolItem("Cleaner", Icons.Outlined.CleaningServices, Routes.FLAT_DUPLICATES_FILE_MANAGER),
         ToolItem("Analyzer", Icons.Outlined.Analytics, Routes.ANALYZER),
         ToolItem("Optimise", Icons.Outlined.PhotoSizeSelectLarge, Routes.OPTIMISE_IMAGES),
-        ToolItem("Recycle Bin", Icons.Outlined.DeleteOutline, Routes.TRASH),
+        ToolItem("Trash", Icons.Outlined.DeleteOutline, Routes.TRASH),
     )
 
     // Detect all storage volumes
@@ -182,6 +182,7 @@ fun ESHomeScreen(
                 actions = {
                     Surface(color = Color.Transparent) {
                         androidx.compose.material3.IconButton(onClick = {
+                            // TODO: implement global search instead of navigating to explorer root
                             onNavigateToExplorer(primaryPath)
                         }) {
                             Icon(
