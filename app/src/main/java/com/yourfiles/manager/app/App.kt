@@ -25,21 +25,23 @@ import com.yourfiles.manager.utils.TrashManager
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 
 
 class App : Application() {
 
-    private lateinit var navController: NavHostController
+    private var navController: NavHostController? = null
 
     lateinit var imageLoader: ImageLoader
 
     lateinit var db: AppDatabase
 
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     fun navController(): NavHostController {
-        return instance.navController
+        return navController ?: throw IllegalStateException("NavController not initialized")
     }
 
     fun initNavController(navController: NavHostController) {
@@ -52,7 +54,7 @@ class App : Application() {
         initDB()
         initLibraries()
         SavedMemoryTracker.initialize()
-        CoroutineScope(Dispatchers.IO).launch {
+        applicationScope.launch {
             TrashManager.cleanupOldTrash(applicationContext)
         }
     }

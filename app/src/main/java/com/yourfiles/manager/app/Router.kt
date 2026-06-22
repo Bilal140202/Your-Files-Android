@@ -132,8 +132,9 @@ fun buildAppGraph(
                 defaultValue = null
             }
         )
-    ) {
-        FolderOrganiserScreen()
+    ) { backStackEntry ->
+        val path = backStackEntry.arguments?.getString("path")
+        FolderOrganiserScreen(initialPath = path)
     }
     composable(
         route = "$APK_INFO?filePath={filePath}",
@@ -158,7 +159,7 @@ fun buildAppGraph(
             navArgument("md5") { type = NavType.StringType; nullable = true; defaultValue = null },
         )
     ) { backStackEntry ->
-        val url = backStackEntry.arguments?.getString("url")!!
+        val url = backStackEntry.arguments?.getString("url") ?: ""
         val category = backStackEntry.arguments?.getString("category") ?: ""
         val md5 = backStackEntry.arguments?.getString("md5")
         val resolvedUrl = Uri.decode(url)

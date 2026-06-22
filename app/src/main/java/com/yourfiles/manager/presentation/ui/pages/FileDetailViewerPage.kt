@@ -2,8 +2,6 @@ package com.yourfiles.manager.presentation.ui.pages
 
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
-import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -47,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yourfiles.manager.app.App
+import com.yourfiles.manager.app.Routes
 import com.yourfiles.manager.data.model.LocalFile
 import com.yourfiles.manager.presentation.ui.components.BackNavigationIconCompose
 import com.yourfiles.manager.presentation.ui.components.VideoPlayer
@@ -59,6 +58,7 @@ import com.yourfiles.manager.utils.isFileArchive
 import com.yourfiles.manager.utils.isFileAudio
 import com.yourfiles.manager.utils.isFileCode
 import com.yourfiles.manager.utils.isFileImage
+import com.yourfiles.manager.utils.isFilePdf
 import com.yourfiles.manager.utils.isFileText
 import com.yourfiles.manager.utils.isFileVideo
 import java.io.File
@@ -252,15 +252,18 @@ fun FileDetailViewerCompose(
                         isFileArchive(mime) && isZipFile(filePath) ->
                             ZipBrowserScreen(filePath = filePath)
 
-                        // APK — direct system installer (check MIME + extension fallback)
+                        // PDF — in-app viewer
+                        isFilePdf(mime) -> PdfViewerScreen(filePath = filePath)
+
+                        // APK — navigate to info screen with Install button
                         mime == "application/vnd.android.package-archive" || isApkFile(filePath) -> {
                             LaunchedEffect(filePath) {
-                                launchApkInstaller(context, filePath)
-                            }
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                CircularProgressIndicator(color = Color.White)
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text("Opening installer...", color = Color.White.copy(alpha = 0.7f))
+                                navigator.currentDestination?.route?.let { currentRoute ->
+                                    navigator.navigate("${Routes.APK_INFO}?filePath=${Uri.encode(filePath)}") {
+                                        popUpTo(currentRoute) { inclusive = true }
+                                        launchSingleTop = true
+                                    }
+                                }
                             }
                         }
 
@@ -291,42 +294,6 @@ fun FileDetailViewerCompose(
                 }
             }
         }
-    }
-}
-
-/**
- * Open APK with Android system package installer directly.
- * Checks REQUEST_INSTALL_PACKAGES on Android 8+.
- */
-private fun launchApkInstaller(context: android.content.Context, filePath: String) {
-    try {
-        val file = File(filePath)
-        if (!file.exists()) return
-
-        // Android 8+: check install permission
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            if (!context.packageManager.canRequestPackageInstalls()) {
-                context.startActivity(
-                    Intent(
-                        Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                        Uri.parse("package:${context.packageName}")
-                    )
-                )
-                return
-            }
-        }
-
-        val uri = androidx.core.content.FileProvider.getUriForFile(
-            context, "${context.packageName}.provider", file
-        )
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, "application/vnd.android.package-archive")
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        context.startActivity(intent)
-    } catch (e: Exception) {
-        Toast.makeText(context, "Cannot install APK: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
     }
 }
 

@@ -331,18 +331,6 @@ fun FileBrowserScreen(
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
-                // Details (same as properties for now)
-                BottomSheetAction(
-                    icon = Icons.Outlined.Info,
-                    label = "Details",
-                    onClick = {
-                        showMoreSheet = false
-                        val firstFile = state.selectedItems.firstOrNull() ?: return@BottomSheetAction
-                        infoText = viewModel.getItemDetails(firstFile)
-                        showInfoSheet = true
-                    },
-                )
-
                 Spacer(modifier = Modifier.height(32.dp))
             }
         }

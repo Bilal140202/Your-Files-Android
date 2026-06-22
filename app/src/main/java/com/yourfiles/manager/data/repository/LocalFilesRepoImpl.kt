@@ -2,6 +2,7 @@ package com.yourfiles.manager.data.repository
 
 import androidx.room.withTransaction
 import androidx.sqlite.db.SimpleSQLiteQuery
+import androidx.sqlite.db.SupportSQLiteQuery
 import com.yourfiles.manager.app.App
 import com.yourfiles.manager.data.db.dao.LocalFilesDao
 import com.yourfiles.manager.data.model.LocalFile
@@ -34,6 +35,10 @@ class LocalFilesRepoImpl(private val dao: LocalFilesDao) : LocalFilesRepo {
 
     override fun getFilesViaQuery(query: String): Flow<List<LocalFile>> {
         return dao.getFilesViaQuery(SimpleSQLiteQuery(query))
+    }
+
+    override fun getFilesViaQuery(query: SupportSQLiteQuery): Flow<List<LocalFile>> {
+        return dao.getFilesViaQuery(query)
     }
 
     override fun fileAlreadyExists(md5: String): Boolean {

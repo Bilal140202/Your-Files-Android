@@ -16,10 +16,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -49,6 +52,13 @@ fun TextViewerScreen(
     var showFull by remember(filePath) { mutableStateOf(false) }
     var isFullLoaded by remember(filePath) { mutableStateOf(false) }
     var fullContent by remember(filePath) { mutableStateOf<String?>(null) }
+
+    val scope = rememberCoroutineScope()
+    val loadFullJob = remember { mutableStateOf<Job?>(null) }
+
+    DisposableEffect(Unit) {
+        onDispose { loadFullJob.value?.cancel() }
+    }
 
     val file = File(filePath)
     val fileSize = remember(filePath) { if (file.exists()) file.length() else 0L }
@@ -129,8 +139,7 @@ fun TextViewerScreen(
                         TextButton(
                             onClick = {
                                 showFull = true
-                                // Load full file in background
-                                kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
+                                loadFullJob.value = scope.launch(Dispatchers.IO) {
                                     val text = try { file.readText(charset("UTF-8")) }
                                     catch (e: Exception) { fileContent!! }
                                     fullContent = text

@@ -17,6 +17,7 @@ import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -37,8 +38,10 @@ import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.PhotoSizeSelectLarge
 import androidx.compose.material.icons.outlined.SdStorage
 import androidx.compose.material.icons.outlined.Settings
+import com.yourfiles.manager.BuildConfig
 import com.yourfiles.manager.app.Routes
 import com.yourfiles.manager.app.App
+import androidx.navigation.compose.currentBackStackEntryAsState
 import kotlinx.coroutines.launch
 
 private data class DrawerMenuItem(
@@ -54,6 +57,37 @@ fun ESDrawerContent(drawerState: DrawerState) {
     val scope = rememberCoroutineScope()
     val navController = App.instance.navController()
     val primaryPath = Environment.getExternalStorageDirectory().absolutePath
+
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+    val currentExplorerPath = navBackStackEntry?.arguments?.getString("path")
+
+    fun isSelected(item: DrawerMenuItem): Boolean {
+        if (item.isSection) return false
+        if (item.route != null) {
+            // Exact match for simple routes
+            if (currentRoute == item.route) return true
+            // Handle parameterized routes: /media-category/apk should match
+            // when currentRoute is /media-category/{categoryType} and arg "apk" is present
+            val routeBase = currentRoute?.substringBefore('{')?.trimEnd('/', '?')
+            val itemBase = item.route.substringBefore('{').trimEnd('/', '?')
+            if (routeBase != null && routeBase == itemBase && currentRoute != item.route) {
+                // One of them is parameterized — compare the concrete segment
+                val concreteSegment = item.route.removePrefix(itemBase).trimStart('/')
+                if (concreteSegment.isNotEmpty()) {
+                    val argKey = currentRoute
+                        ?.substringAfter('{')?.substringBefore('}')?.trim()
+                    if (argKey != null) {
+                        val argValue = navBackStackEntry?.arguments?.getString(argKey)
+                        return argValue == concreteSegment
+                    }
+                }
+            }
+            return false
+        }
+        if (item.path != null) return currentRoute == "${Routes.EXPLORER}?path={path}" && currentExplorerPath == item.path
+        return false
+    }
 
     fun navigate(routeOrPath: String, isRoute: Boolean) {
         scope.launch { drawerState.close() }
@@ -78,12 +112,12 @@ fun ESDrawerContent(drawerState: DrawerState) {
         DrawerMenuItem("Videos", Icons.Outlined.Movie, path = "$primaryPath/Movies"),
         DrawerMenuItem("Documents", Icons.Outlined.Description, path = "$primaryPath/Documents"),
         DrawerMenuItem("Music", Icons.Outlined.MusicNote, path = "$primaryPath/Music"),
-        DrawerMenuItem("APKs", Icons.Outlined.Memory, path = "$primaryPath/Download"),
+        DrawerMenuItem("APKs", Icons.Outlined.Memory, route = "${Routes.MEDIA_STORE_CATEGORY}/apk"),
         DrawerMenuItem("", Icons.Outlined.Folder, isSection = true),
         DrawerMenuItem("Cleaner", Icons.Outlined.CleaningServices, route = Routes.FLAT_DUPLICATES_FILE_MANAGER),
         DrawerMenuItem("Storage Analyzer", Icons.Outlined.Analytics, route = Routes.ANALYZER),
         DrawerMenuItem("Image Optimiser", Icons.Outlined.PhotoSizeSelectLarge, route = Routes.OPTIMISE_IMAGES),
-        DrawerMenuItem("Recycle Bin", Icons.Outlined.DeleteOutline, route = Routes.TRASH),
+        DrawerMenuItem("Trash", Icons.Outlined.DeleteOutline, route = Routes.TRASH),
         DrawerMenuItem("", Icons.Outlined.Folder, isSection = true),
         DrawerMenuItem("Settings", Icons.Outlined.Settings, route = Routes.SETTINGS),
     )
@@ -98,7 +132,7 @@ fun ESDrawerContent(drawerState: DrawerState) {
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "File Manager v1.0",
+            text = "Your Files v${BuildConfig.VERSION_NAME}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 16.dp),
@@ -125,7 +159,7 @@ fun ESDrawerContent(drawerState: DrawerState) {
                     NavigationDrawerItem(
                         icon = { Icon(item.icon, contentDescription = null, modifier = Modifier.height(24.dp)) },
                         label = { Text(item.label, style = MaterialTheme.typography.bodyMedium) },
-                        selected = false,
+                        selected = isSelected(item),
                         onClick = {
                             if (item.route != null) navigate(item.route, true)
                             else if (item.path != null) navigate(item.path, false)

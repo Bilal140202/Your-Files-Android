@@ -121,9 +121,14 @@ class FlatDuplicatesFileManagerVM : ViewModel() {
     fun deleteFile(localFile: LocalFile) {
         viewModelScope.launch(Dispatchers.IO) {
             val sizeBytes = File(localFile.id).length()
+            // Move to trash first — only delete from DB on success
+            try {
+                TrashManager.moveToTrash(setOf(localFile.id))
+            } catch (e: Exception) {
+                Log.e("FlatDuplicates", "Failed to move to trash: ${localFile.id}", e)
+                return@launch
+            }
             launch { fileUseCases.deleteFile(localFile.id) }.join()
-            // Move to recycle bin instead of permanent delete
-            TrashManager.moveToTrash(setOf(localFile.id))
             SavedMemoryTracker.addSavedBytes(sizeBytes)
             withContext(Dispatchers.Main) {
                 selectedFileIds.value -= localFile.id

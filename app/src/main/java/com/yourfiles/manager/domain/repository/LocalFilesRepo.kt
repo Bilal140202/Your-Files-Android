@@ -1,5 +1,6 @@
 package com.yourfiles.manager.domain.repository
 
+import androidx.sqlite.db.SupportSQLiteQuery
 import com.yourfiles.manager.data.model.LocalFile
 import kotlinx.coroutines.flow.Flow
 import org.intellij.lang.annotations.Pattern
@@ -17,6 +18,8 @@ interface LocalFilesRepo {
     suspend fun deleteFiles(ids: List<String>)
 
     fun getFilesViaQuery(query: String): Flow<List<LocalFile>>
+
+    fun getFilesViaQuery(query: SupportSQLiteQuery): Flow<List<LocalFile>>
 
     fun fileAlreadyExists(md5: String) : Boolean
 

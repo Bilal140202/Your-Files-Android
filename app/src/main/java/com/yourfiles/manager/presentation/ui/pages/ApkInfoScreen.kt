@@ -19,9 +19,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,12 +40,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.yourfiles.manager.presentation.ui.components.BackNavigationIconCompose
 import java.io.File
 
 /**
  * APK info viewer — shows package name, version, icon, and Install button.
  * Reads APK metadata via PackageManager.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ApkInfoScreen(
     filePath: String,
@@ -104,10 +109,19 @@ fun ApkInfoScreen(
         }
     }
 
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(file.name, fontSize = 14.sp) },
+                navigationIcon = { BackNavigationIconCompose() },
+            )
+        }
+    ) { innerPadding ->
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(innerPadding)
+            .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -205,6 +219,7 @@ fun ApkInfoScreen(
         ) {
             Text("Open with...")
         }
+    }
     }
 }
 

@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import org.json.JSONArray
 import org.json.JSONObject
@@ -33,7 +34,7 @@ object TrashManager {
     private const val KEY_RECORDS = "records"
 
     /** In-memory mapping of originalPath -> trashPath for the most recent trash operation. */
-    private val lastTrashedEntries = mutableMapOf<String, String>()
+    private val lastTrashedEntries = ConcurrentHashMap<String, String>()
 
     private val _trashInfo = MutableStateFlow(TrashInfo(fileCount = 0, totalSize = 0L))
 

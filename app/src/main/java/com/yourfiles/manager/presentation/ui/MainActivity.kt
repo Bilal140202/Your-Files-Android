@@ -107,9 +107,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun isStoragePermissionGranted(): Boolean {
-        return if (SDK_INT >= Build.VERSION_CODES.R) {
-            Environment.isExternalStorageManager()
-        } else if (SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        return if (SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             // Android 13+: granular media permissions
             val images = ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES)
             val video = ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_VIDEO)
@@ -117,6 +115,8 @@ class MainActivity : AppCompatActivity() {
             images == PackageManager.PERMISSION_GRANTED &&
                     video == PackageManager.PERMISSION_GRANTED &&
                     audio == PackageManager.PERMISSION_GRANTED
+        } else if (SDK_INT >= Build.VERSION_CODES.R) {
+            Environment.isExternalStorageManager()
         } else {
             val result = ActivityCompat.checkSelfPermission(this, READ_EXTERNAL_STORAGE)
             val result1 = ActivityCompat.checkSelfPermission(this, WRITE_EXTERNAL_STORAGE)
@@ -126,7 +126,14 @@ class MainActivity : AppCompatActivity() {
 
 
     private fun seekStoragePermission() {
-        if (SDK_INT >= Build.VERSION_CODES.R) {
+        if (SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Android 13+: granular media permissions
+            requestMediaPermissionLauncher.launch(arrayOf(
+                Manifest.permission.READ_MEDIA_IMAGES,
+                Manifest.permission.READ_MEDIA_VIDEO,
+                Manifest.permission.READ_MEDIA_AUDIO,
+            ))
+        } else if (SDK_INT >= Build.VERSION_CODES.R) {
             // Android 11+: request MANAGE_EXTERNAL_STORAGE
             val intent: Intent = try {
                 val uri: Uri = Uri.parse("package:" + BuildConfig.APPLICATION_ID)
@@ -137,13 +144,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             requestPermissionLauncher.launch(intent)
-        } else if (SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            // Android 13+: granular media permissions
-            requestMediaPermissionLauncher.launch(arrayOf(
-                Manifest.permission.READ_MEDIA_IMAGES,
-                Manifest.permission.READ_MEDIA_VIDEO,
-                Manifest.permission.READ_MEDIA_AUDIO,
-            ))
         } else {
             if (SDK_INT >= Build.VERSION_CODES.M) {
                 requestPermissions(arrayOf(WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE), 123)

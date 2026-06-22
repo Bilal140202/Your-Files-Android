@@ -103,9 +103,10 @@ fun ZipBrowserScreen(
     var error by remember(filePath) { mutableStateOf<String?>(null) }
     var totalEntries by remember(filePath) { mutableStateOf(0) }
     var totalSize by remember(filePath) { mutableStateOf(0L) }
+    var retryTrigger by remember(filePath) { mutableStateOf(0) }
 
     // Read ZIP contents on background thread
-    LaunchedEffect(filePath) {
+    LaunchedEffect(filePath, retryTrigger) {
         loading = true
         error = null
         try {
@@ -184,7 +185,8 @@ fun ZipBrowserScreen(
                         Text(currentError, color = Color.Red, fontSize = 14.sp)
                         Spacer(modifier = Modifier.height(8.dp))
                         TextButton(onClick = {
-                            // Retry
+                            error = null
+                            retryTrigger++
                         }) { Text("Retry", color = MaterialTheme.colorScheme.primary) }
                     }
                 }

@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.yourfiles.manager.BuildConfig
 import com.yourfiles.manager.R
 import com.yourfiles.manager.presentation.ui.components.BackNavigationIconCompose
 
@@ -186,7 +187,7 @@ fun SettingsPage() {
                 SettingsInfoRow(
                     icon = Icons.Outlined.VerifiedUser,
                     title = "Your Files",
-                    description = "Your Files v1.0.0"
+                    description = "Your Files v${BuildConfig.VERSION_NAME}"
                 )
             }
 

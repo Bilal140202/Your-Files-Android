@@ -1,6 +1,7 @@
 package com.yourfiles.manager.domain.interactors
 
 import android.text.format.Formatter
+import androidx.sqlite.db.SimpleSQLiteQuery
 import com.yourfiles.manager.app.App
 import com.yourfiles.manager.data.model.LocalFile
 import com.yourfiles.manager.data.model.toLocalFile
@@ -141,7 +142,7 @@ class FileUseCases(private val repo: LocalFilesRepo) {
     }
 
     fun getFilesByMd5(md5: String): Flow<List<LocalFile>> {
-        return repo.getFilesViaQuery("SELECT * FROM localfile WHERE md5 = '$md5'")
+        return repo.getFilesViaQuery(SimpleSQLiteQuery("SELECT * FROM localfile WHERE md5 = ?", arrayOf(md5)))
     }
 
     fun getScreenshotFiles(): Flow<List<LocalFile>> {

@@ -162,8 +162,8 @@ class StorageAnalyzerVM(app: Application) : AndroidViewModel(app) {
                 val estimatedMultiplier = 20  // heuristic: each top-level dir has ~20 descendants
                 val estimatedTotal = (rootChildren.size * estimatedMultiplier).toLong().coerceAtLeast(1000L)
 
-                // Full recursive walk — no depth limit
-                rootDir.walkTopDown()
+                // Full recursive walk — capped at 15 levels to avoid node_modules/.gradle black holes
+                rootDir.walkTopDown().maxDepth(15)
                     .onEnter { dir -> !dir.name.startsWith(".") }
                     .forEach { file ->
                         if (file.isFile) {

@@ -40,6 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -64,8 +65,16 @@ import com.yourfiles.manager.presentation.vm.SortOption
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FolderOrganiserScreen(
+    initialPath: String? = null,
     viewModel: FolderOrganiserViewModel = viewModel(),
 ) {
+    // Load folder from explicit nav argument (more reliable than SavedStateHandle auto-population)
+    LaunchedEffect(initialPath) {
+        if (initialPath != null) {
+            viewModel.loadFolder(initialPath)
+        }
+    }
+
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
     var showSortMenu by remember { mutableStateOf(false) }

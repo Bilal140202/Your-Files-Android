@@ -120,6 +120,7 @@ fun AudioPlayerScreen(
 
         // Poll position for seek bar updates (every 250ms)
         while (true) {
+            if (playbackError != null) break
             try {
                 if (player.playbackState == Player.STATE_READY) {
                     currentPositionMs = player.currentPosition.toFloat()
