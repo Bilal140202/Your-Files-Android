@@ -147,10 +147,20 @@ class FlatDuplicatesFileManagerVM : ViewModel() {
             val totalBytes = pendingDeleteFiles.sumOf { File(it).length() }
             withContext(Dispatchers.Main) { isDeleting.value = true }
 
-            // Move to trash instead of permanent delete
-            val trashedEntries = TrashManager.moveToTrash(pendingDeleteFiles)
+            // Move to trash instead of permanent delete — only delete from DB on success
+            val trashedEntries = try {
+                TrashManager.moveToTrash(pendingDeleteFiles)
+            } catch (e: Exception) {
+                Log.e("FlatDuplicates", "Failed to move files to trash", e)
+                withContext(Dispatchers.Main) {
+                    isDeleting.value = false
+                    showDeleteDialog.value = false
+                    pendingDeleteFiles = emptySet()
+                }
+                return@launch
+            }
 
-            // Remove from database
+            // Remove from database only after successful trash
             launch {
                 fileUseCases.deleteFiles(pendingDeleteFiles.toList())
             }.join()
