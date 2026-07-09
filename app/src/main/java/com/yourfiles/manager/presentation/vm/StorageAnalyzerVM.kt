@@ -13,6 +13,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -96,6 +97,11 @@ class StorageAnalyzerVM(app: Application) : AndroidViewModel(app) {
         analyzeStorage()
     }
 
+    override fun onCleared() {
+        super.onCleared()
+        scanJob?.cancel()
+    }
+
     fun analyzeStorage() {
         // Force rescan: clear cache
         cachedState = null
@@ -137,10 +143,11 @@ class StorageAnalyzerVM(app: Application) : AndroidViewModel(app) {
                 // Top-20 largest files via min-heap (capacity 21)
                 val largestHeap = PriorityQueue<LargestFileEntry>(21, compareBy { it.size })
 
-                // Recent files: modified in last 7 days
+                // Recent files: modified in last 7 days (capped during collection)
                 val sevenDaysMs = 7L * 24 * 60 * 60 * 1000
                 val recentCutoff = System.currentTimeMillis() - sevenDaysMs
                 val recentFilesList = mutableListOf<RecentFileEntry>()
+                val MAX_RECENT_FILES = 200 // Cap during scan to prevent OOM
 
                 // Cleanup data collection
                 var apkCount = 0
@@ -150,8 +157,8 @@ class StorageAnalyzerVM(app: Application) : AndroidViewModel(app) {
                 val oldFileCutoff = System.currentTimeMillis() - thirtyDaysMs
                 var emptyFolderCount = 0
 
-                // Directories to skip for recent files (Android/data, Android/obb, .nomedia dirs)
-                val skipDirSuffixes = setOf(
+                // Directories to skip entirely (huge, mostly inaccessible app data)
+                val skipEntirely = setOf(
                     "${File.separator}Android${File.separator}data",
                     "${File.separator}Android${File.separator}obb",
                 )
@@ -162,10 +169,25 @@ class StorageAnalyzerVM(app: Application) : AndroidViewModel(app) {
                 val estimatedMultiplier = 20  // heuristic: each top-level dir has ~20 descendants
                 val estimatedTotal = (rootChildren.size * estimatedMultiplier).toLong().coerceAtLeast(1000L)
 
-                // Full recursive walk — no depth limit
+                // Full recursive walk with depth limit and cancellation checks
+                val MAX_DEPTH = 15
                 rootDir.walkTopDown()
-                    .onEnter { dir -> !dir.name.startsWith(".") }
+                    .onEnter { dir ->
+                        // Skip hidden directories
+                        if (dir.name.startsWith(".")) return@onEnter false
+                        // Skip Android/data and Android/obb entirely (huge, inaccessible)
+                        val absPath = dir.absolutePath
+                        if (skipEntirely.any { absPath.contains(it) }) return@onEnter false
+                        // Depth limit to prevent infinite symlink loops
+                        val relPath = dir.relativeToOrSelf(rootDir).invariantSeparatorsPath
+                        val depth = relPath.count { it == '/' }
+                        if (depth > MAX_DEPTH) return@onEnter false
+                        true
+                    }
                     .forEach { file ->
+                        // Check for cancellation (e.g. VM cleared, user navigated away)
+                        ensureActive()
+                        try {
                         if (file.isFile) {
                             val size = file.length()
                             val cat = categorize(file.name)
@@ -180,23 +202,17 @@ class StorageAnalyzerVM(app: Application) : AndroidViewModel(app) {
                                 largestHeap.add(LargestFileEntry(file.absolutePath, file.name, size))
                             }
 
-                            // Collect recent files (skip Android/data, Android/obb)
+                            // Collect recent files — capped (Android/data,obb already skipped by walk)
                             val lastMod = file.lastModified()
-                            if (lastMod >= recentCutoff) {
-                                val absPath = file.absolutePath
-                                val isSkippedDir = skipDirSuffixes.any { suffix ->
-                                    absPath.contains(suffix)
-                                }
-                                if (!isSkippedDir) {
-                                    recentFilesList.add(
-                                        RecentFileEntry(
-                                            path = absPath,
-                                            name = file.name,
-                                            size = size,
-                                            lastModified = lastMod,
-                                        )
+                            if (lastMod >= recentCutoff && recentFilesList.size < MAX_RECENT_FILES) {
+                                recentFilesList.add(
+                                    RecentFileEntry(
+                                        path = file.absolutePath,
+                                        name = file.name,
+                                        size = size,
+                                        lastModified = lastMod,
                                     )
-                                }
+                                )
                             }
 
                             // Cleanup data: APKs anywhere
@@ -224,10 +240,17 @@ class StorageAnalyzerVM(app: Application) : AndroidViewModel(app) {
                             }
                         } else if (file.isDirectory) {
                             // Count empty folders (directories with no files inside)
-                            val childFiles = file.listFiles()
-                            if (childFiles != null && childFiles.isEmpty()) {
-                                emptyFolderCount++
+                            try {
+                                val childFiles = file.listFiles()
+                                if (childFiles != null && childFiles.isEmpty()) {
+                                    emptyFolderCount++
+                                }
+                            } catch (_: SecurityException) {
+                                // Permission denied — skip this directory
                             }
+                        }
+                        } catch (_: SecurityException) {
+                            // Permission denied reading file — skip
                         }
                     }
 
@@ -312,8 +335,12 @@ class StorageAnalyzerVM(app: Application) : AndroidViewModel(app) {
                     "top file: ${topFiles.firstOrNull()?.name} (${topFiles.firstOrNull()?.size ?: 0})"
                 )
             } catch (e: Exception) {
-                Log.e("StorageAnalyzer", "Analysis failed", e)
-                _state.value = _state.value.copy(isScanning = false, error = e.message)
+                if (e is kotlinx.coroutines.CancellationException) {
+                    Log.d("StorageAnalyzer", "Scan cancelled (VM cleared or user navigated away)")
+                } else {
+                    Log.e("StorageAnalyzer", "Analysis failed", e)
+                    _state.value = _state.value.copy(isScanning = false, error = e.message)
+                }
             }
         }
     }
