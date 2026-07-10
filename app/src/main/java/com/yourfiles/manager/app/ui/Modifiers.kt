@@ -6,7 +6,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 
-val IconModifier = Modifier
+fun iconModifier(): Modifier = Modifier
     .size(48.dp)
     .padding(12.dp)
 

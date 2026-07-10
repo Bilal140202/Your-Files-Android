@@ -49,7 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
-import com.yourfiles.manager.app.App
+import com.yourfiles.manager.app.LocalNavController
 import com.yourfiles.manager.app.Routes
 import com.yourfiles.manager.domain.model.FileItem
 import com.yourfiles.manager.presentation.vm.CategoryType
@@ -75,6 +75,7 @@ fun MediaStoreCategoryScreen(
     viewModel: MediaStoreCategoryVM = viewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val navController = LocalNavController.current
 
     Scaffold(
         topBar = {
@@ -97,7 +98,7 @@ fun MediaStoreCategoryScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = {
-                        App.instance.navController().popBackStack()
+                        navController.popBackStack()
                     }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
@@ -167,7 +168,7 @@ fun MediaStoreCategoryScreen(
                                 item = item,
                                 categoryType = categoryType,
                                 onClick = {
-                                    App.instance.navController().navigate(
+                                    navController.navigate(
                                         "${Routes.FILE_DETAIL_VIEWER}?url=${android.net.Uri.encode(item.path)}&category=file"
                                     )
                                 },

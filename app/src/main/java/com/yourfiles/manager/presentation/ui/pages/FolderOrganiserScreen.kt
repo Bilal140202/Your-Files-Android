@@ -68,6 +68,7 @@ fun FolderOrganiserScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
+    val navController = com.yourfiles.manager.app.LocalNavController.current
     var showSortMenu by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -81,7 +82,7 @@ fun FolderOrganiserScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = { com.yourfiles.manager.app.App.instance.navController().popBackStack() }) {
+                    IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",

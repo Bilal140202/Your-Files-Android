@@ -3,6 +3,7 @@ package com.yourfiles.manager.app
 import android.net.Uri
 import androidx.compose.material3.DrawerState
 import androidx.navigation.NavGraphBuilder
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
@@ -43,14 +44,15 @@ import kotlinx.coroutines.launch
 fun buildAppGraph(
     drawerState: DrawerState,
     scope: CoroutineScope,
+    navController: NavHostController,
 ): NavGraphBuilder.() -> Unit = {
     composable(HOME) {
         ESHomeScreen(
             onNavigateToExplorer = { path ->
-                App.instance.navController().navigate("${EXPLORER}?path=${Uri.encode(path)}")
+                navController.navigate("${EXPLORER}?path=${Uri.encode(path)}")
             },
             onNavigateToRoute = { route ->
-                App.instance.navController().navigate(route)
+                navController.navigate(route)
             },
             onOpenDrawer = {
                 scope.launch { drawerState.open() }
@@ -102,7 +104,7 @@ fun buildAppGraph(
     composable(Routes.ANALYZER) {
         StorageAnalyzerScreen(
             onNavigateToExplorer = { path ->
-                App.instance.navController().navigate("${EXPLORER}?path=${Uri.encode(path)}")
+                navController.navigate("${EXPLORER}?path=${Uri.encode(path)}")
             }
         )
     }

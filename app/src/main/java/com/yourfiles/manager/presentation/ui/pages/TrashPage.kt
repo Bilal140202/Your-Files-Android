@@ -48,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.yourfiles.manager.R
 import com.yourfiles.manager.presentation.ui.components.BackNavigationIconCompose
+import com.yourfiles.manager.presentation.ui.components.common.EmptyStateView
 import com.yourfiles.manager.utils.TrashManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -162,32 +163,11 @@ fun TrashPage() {
 
                 // ── Empty trash ──────────────────────────────────────────────
                 trashFiles.isEmpty() -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.DeleteOutline,
-                            contentDescription = null,
-                            modifier = Modifier.size(72.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "Trash is empty",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Deleted files will appear here and can be restored",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                    EmptyStateView(
+                        icon = Icons.Outlined.DeleteOutline,
+                        title = stringResource(R.string.trash_empty),
+                        subtitle = stringResource(R.string.trash_empty_description),
+                    )
                 }
 
                 // ── Trash has files ────────────────────────────────────────────
@@ -202,7 +182,7 @@ fun TrashPage() {
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                text = "${trashFiles.size} item${if (trashFiles.size != 1) "s" else ""} \u00B7 ${
+                                text = "${context.resources.getQuantityString(R.plurals.trash_item_count, trashFiles.size, trashFiles.size)} \u00B7 ${
                                     Formatter.formatFileSize(context, totalSize)
                                 }",
                                 style = MaterialTheme.typography.bodyMedium,
@@ -221,7 +201,7 @@ fun TrashPage() {
                                     modifier = Modifier.size(18.dp),
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Empty Trash")
+                                Text(stringResource(R.string.trash_empty_trash))
                             }
                         }
 
@@ -256,21 +236,20 @@ fun TrashPage() {
     if (showEmptyTrashDialog) {
         AlertDialog(
             onDismissRequest = { showEmptyTrashDialog = false },
-            title = { Text("Empty Trash") },
+            title = { Text(stringResource(R.string.trash_empty_trash)) },
             text = {
                 Text(
-                    "Permanently delete all ${trashFiles.size} items in trash? " +
-                        "This action cannot be undone."
+                    stringResource(R.string.trash_empty_trash_confirmation, trashFiles.size)
                 )
             },
             confirmButton = {
                 TextButton(onClick = emptyTrash) {
-                    Text("Empty", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.trash_empty_button), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showEmptyTrashDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
             },
         )
@@ -280,20 +259,20 @@ fun TrashPage() {
     if (showRestoreDialog != null) {
         AlertDialog(
             onDismissRequest = { showRestoreDialog = null },
-            title = { Text("Restore File") },
+            title = { Text(stringResource(R.string.trash_restore_file)) },
             text = {
                 Text(
-                    "Restore \"${showRestoreDialog?.name ?: "file"}\" to its original location?"
+                    stringResource(R.string.trash_restore_confirmation, showRestoreDialog?.name ?: "file")
                 )
             },
             confirmButton = {
                 TextButton(onClick = confirmRestore) {
-                    Text("Restore")
+                    Text(stringResource(R.string.trash_restore))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showRestoreDialog = null }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
             },
         )
@@ -303,10 +282,10 @@ fun TrashPage() {
     if (isRestoring) {
         AlertDialog(
             onDismissRequest = { },
-            title = { Text("Restoring\u2026") },
+            title = { Text(stringResource(R.string.trash_restoring)) },
             text = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Moving file back to its original location")
+                    Text(stringResource(R.string.trash_moving_back))
                     Spacer(modifier = Modifier.height(16.dp))
                     CircularProgressIndicator(
                         color = MaterialTheme.colorScheme.primary,
@@ -321,10 +300,10 @@ fun TrashPage() {
     if (isEmptyingTrash) {
         AlertDialog(
             onDismissRequest = { },
-            title = { Text("Emptying Trash\u2026") },
+            title = { Text(stringResource(R.string.trash_emptying)) },
             text = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Permanently deleting all trashed files")
+                    Text(stringResource(R.string.trash_permanently_deleting))
                     Spacer(modifier = Modifier.height(16.dp))
                     CircularProgressIndicator(
                         color = MaterialTheme.colorScheme.primary,
@@ -406,7 +385,7 @@ private fun TrashFileItem(
                     modifier = Modifier.size(18.dp),
                 )
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Restore")
+                Text(stringResource(R.string.trash_restore))
             }
         }
     }

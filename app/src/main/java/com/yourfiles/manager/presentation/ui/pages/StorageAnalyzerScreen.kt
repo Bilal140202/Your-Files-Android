@@ -22,13 +22,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
-import androidx.compose.material.icons.outlined.Archive
-import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.Memory
-import androidx.compose.material.icons.outlined.Movie
-import androidx.compose.material.icons.outlined.MusicNote
-import androidx.compose.material.icons.outlined.QuestionMark
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -57,13 +50,15 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.yourfiles.manager.app.App
+import com.yourfiles.manager.R
+import com.yourfiles.manager.app.LocalNavController
 import com.yourfiles.manager.presentation.vm.AnalyzerUiState
 import com.yourfiles.manager.presentation.vm.CategoryStats
 import com.yourfiles.manager.presentation.vm.CleanupSuggestion
@@ -71,40 +66,24 @@ import com.yourfiles.manager.presentation.vm.LargestFileEntry
 import com.yourfiles.manager.presentation.vm.RecentFileEntry
 import com.yourfiles.manager.presentation.vm.StorageAnalyzerVM
 import com.yourfiles.manager.presentation.vm.StorageCategory
+import com.yourfiles.manager.app.uim3.theme.CATEGORY_COLORS
+import com.yourfiles.manager.app.uim3.theme.CATEGORY_ICONS
+import com.yourfiles.manager.app.uim3.theme.CATEGORY_FOLDERS
 import java.io.File
 import kotlin.math.roundToInt
 
-/** Colors for each storage category, ES 2014 style. */
-private val CATEGORY_COLORS = mapOf(
-    StorageCategory.IMAGES to Color(0xFFE91E63),
-    StorageCategory.VIDEOS to Color(0xFF9C27B0),
-    StorageCategory.AUDIO to Color(0xFFFF9800),
-    StorageCategory.DOCUMENTS to Color(0xFF2196F3),
-    StorageCategory.APK to Color(0xFF4CAF50),
-    StorageCategory.ARCHIVES to Color(0xFF795548),
-    StorageCategory.OTHER to Color(0xFF607D8B),
-)
-
-private val CATEGORY_ICONS = mapOf(
-    StorageCategory.IMAGES to Icons.Outlined.Image,
-    StorageCategory.VIDEOS to Icons.Outlined.Movie,
-    StorageCategory.AUDIO to Icons.Outlined.MusicNote,
-    StorageCategory.DOCUMENTS to Icons.Outlined.Description,
-    StorageCategory.APK to Icons.Outlined.Memory,
-    StorageCategory.ARCHIVES to Icons.Outlined.Archive,
-    StorageCategory.OTHER to Icons.Outlined.QuestionMark,
-)
-
-/** Category → Android folder path for "open filtered" navigation. */
-private val CATEGORY_FOLDERS = mapOf(
-    StorageCategory.IMAGES to "Pictures",
-    StorageCategory.VIDEOS to "Movies",
-    StorageCategory.AUDIO to "Music",
-    StorageCategory.DOCUMENTS to "Documents",
-    StorageCategory.APK to "Download",
-    StorageCategory.ARCHIVES to "Download",
-    StorageCategory.OTHER to null,
-)
+/** Map StorageCategory to string resource ID for localized labels. */
+@Composable
+private fun storageCategoryLabel(category: StorageCategory): String =
+    when (category) {
+        StorageCategory.IMAGES -> stringResource(R.string.category_images)
+        StorageCategory.VIDEOS -> stringResource(R.string.category_videos)
+        StorageCategory.AUDIO -> stringResource(R.string.category_audio)
+        StorageCategory.DOCUMENTS -> stringResource(R.string.category_documents)
+        StorageCategory.APK -> stringResource(R.string.category_apks)
+        StorageCategory.ARCHIVES -> stringResource(R.string.category_archives)
+        StorageCategory.OTHER -> stringResource(R.string.category_other)
+    }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -114,24 +93,25 @@ fun StorageAnalyzerScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val primaryPath = Environment.getExternalStorageDirectory().absolutePath
+    val navController = LocalNavController.current
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = "Storage Analyzer",
+                        text = stringResource(R.string.storage_analyzer),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                     )
                 },
                 navigationIcon = {
                     androidx.compose.material3.IconButton(onClick = {
-                        App.instance.navController().popBackStack()
+                        navController.popBackStack()
                     }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.analyzer_back),
                         )
                     }
                 },
@@ -160,13 +140,13 @@ fun StorageAnalyzerScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "Scanning storage\u2026",
+                            text = stringResource(R.string.analyzer_scanning),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         if (state.scanProgress > 0) {
                             Spacer(modifier = Modifier.height(4.dp))
-                            val progressText = "${state.scanProgress}% \u00B7 ${String.format("%,d", state.scannedFileCount)} files"
+                            val progressText = stringResource(R.string.analyzer_scan_progress, state.scanProgress, String.format("%,d", state.scannedFileCount))
                             Text(
                                 text = progressText,
                                 style = MaterialTheme.typography.bodySmall,
@@ -186,13 +166,13 @@ fun StorageAnalyzerScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = state.error ?: "Error",
+                            text = state.error ?: stringResource(R.string.analyzer_error),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.error,
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         TextButton(onClick = { viewModel.analyzeStorage() }) {
-                            Text("Retry")
+                            Text(stringResource(R.string.analyzer_retry))
                         }
                     }
                 }
@@ -222,7 +202,7 @@ fun StorageAnalyzerScreen(
 
                     item {
                         Text(
-                            text = "Category Breakdown",
+                            text = stringResource(R.string.analyzer_category_breakdown),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -249,7 +229,7 @@ fun StorageAnalyzerScreen(
                         item {
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Top ${state.topLargestFiles.size} Largest Files",
+                                text = stringResource(R.string.analyzer_top_largest_files, state.topLargestFiles.size),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -277,7 +257,7 @@ fun StorageAnalyzerScreen(
                         item {
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Recently Added",
+                                text = stringResource(R.string.analyzer_recently_added),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -304,7 +284,7 @@ fun StorageAnalyzerScreen(
                         item {
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Cleanup Suggestions",
+                                text = stringResource(R.string.analyzer_cleanup_suggestions),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -347,7 +327,7 @@ fun StorageAnalyzerScreen(
                                     modifier = Modifier.size(18.dp),
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Rescan Storage")
+                                Text(stringResource(R.string.analyzer_rescan_storage))
                             }
                         }
                     }
@@ -386,7 +366,7 @@ private fun OverviewCardsSection(state: AnalyzerUiState) {
             // Total Storage
             StatCard(
                 modifier = Modifier.weight(1f),
-                label = "Total",
+                label = stringResource(R.string.analyzer_total),
                 value = Formatter.formatShortFileSize(context, state.totalCapacityBytes),
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -398,7 +378,7 @@ private fun OverviewCardsSection(state: AnalyzerUiState) {
             ) {
                 StatCard(
                     modifier = Modifier.fillMaxWidth(),
-                    label = "Used",
+                    label = stringResource(R.string.analyzer_used),
                     value = Formatter.formatShortFileSize(context, state.totalUsedBytes),
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -418,7 +398,7 @@ private fun OverviewCardsSection(state: AnalyzerUiState) {
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "${(usageFraction * 100).roundToInt()}% used",
+                    text = stringResource(R.string.analyzer_percent_used, (usageFraction * 100).roundToInt()),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 10.sp,
@@ -428,7 +408,7 @@ private fun OverviewCardsSection(state: AnalyzerUiState) {
             // Available
             StatCard(
                 modifier = Modifier.weight(1f),
-                label = "Available",
+                label = stringResource(R.string.analyzer_available),
                 value = Formatter.formatShortFileSize(context, state.availableBytes),
                 color = Color(0xFF4CAF50),
             )
@@ -438,7 +418,7 @@ private fun OverviewCardsSection(state: AnalyzerUiState) {
 
         // Scan summary
         Text(
-            text = "Scanned ${String.format("%,d", state.scannedFileCount)} files",
+            text = stringResource(R.string.analyzer_scanned_files, String.format("%,d", state.scannedFileCount)),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.fillMaxWidth(),
@@ -540,7 +520,7 @@ private fun DonutChartSection(state: AnalyzerUiState) {
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    text = "Scanned",
+                    text = stringResource(R.string.analyzer_scanned),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -563,7 +543,7 @@ private fun DonutChartSection(state: AnalyzerUiState) {
                     ) {}
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = catStat.category.label,
+                        text = storageCategoryLabel(catStat.category),
                         fontSize = 9.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
@@ -613,7 +593,7 @@ private fun CategoryRow(
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = icon,
-                        contentDescription = stats.category.label,
+                        contentDescription = storageCategoryLabel(stats.category),
                         tint = color,
                         modifier = Modifier.size(20.dp),
                     )
@@ -625,12 +605,12 @@ private fun CategoryRow(
             // Category name + file count
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = stats.category.label,
+                    text = storageCategoryLabel(stats.category),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                 )
                 Text(
-                    text = "${stats.fileCount} files",
+                    text = stringResource(R.string.analyzer_files_count, stats.fileCount),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -756,7 +736,7 @@ private fun RecentFileRow(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = getRelativeDate(entry.lastModified),
+                    text = getRelativeDate(LocalContext.current, entry.lastModified),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -778,15 +758,15 @@ private fun RecentFileRow(
 /**
  * Convert a timestamp to a human-readable relative date string.
  */
-private fun getRelativeDate(timestamp: Long): String {
+private fun getRelativeDate(context: android.content.Context, timestamp: Long): String {
     val now = System.currentTimeMillis()
     val diffMs = now - timestamp
     val diffDays = (diffMs / (24 * 60 * 60 * 1000L)).toInt()
 
     return when {
-        diffDays == 0 -> "Today"
-        diffDays == 1 -> "Yesterday"
-        diffDays < 7 -> "$diffDays days ago"
+        diffDays == 0 -> context.getString(R.string.analyzer_today)
+        diffDays == 1 -> context.getString(R.string.analyzer_yesterday)
+        diffDays < 7 -> context.getString(R.string.analyzer_days_ago, diffDays)
         else -> {
             // Fallback to simple date
             val sdf = java.text.SimpleDateFormat("MMM d", java.util.Locale.getDefault())

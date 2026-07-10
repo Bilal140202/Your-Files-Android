@@ -37,8 +37,10 @@ import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.PhotoSizeSelectLarge
 import androidx.compose.material.icons.outlined.SdStorage
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.ui.res.stringResource
+import com.yourfiles.manager.R
 import com.yourfiles.manager.app.Routes
-import com.yourfiles.manager.app.App
+import com.yourfiles.manager.app.LocalNavController
 import kotlinx.coroutines.launch
 
 private data class DrawerMenuItem(
@@ -52,7 +54,7 @@ private data class DrawerMenuItem(
 @Composable
 fun ESDrawerContent(drawerState: DrawerState) {
     val scope = rememberCoroutineScope()
-    val navController = App.instance.navController()
+    val navController = LocalNavController.current
     val primaryPath = Environment.getExternalStorageDirectory().absolutePath
 
     fun navigate(routeOrPath: String, isRoute: Boolean) {
@@ -71,34 +73,34 @@ fun ESDrawerContent(drawerState: DrawerState) {
     }
 
     val menuItems = listOf(
-        DrawerMenuItem("Home", Icons.Outlined.Home, route = Routes.HOME),
-        DrawerMenuItem("Internal Storage", Icons.Outlined.SdStorage, path = primaryPath),
-        DrawerMenuItem("Downloads", Icons.Outlined.Download, path = "$primaryPath/Download"),
-        DrawerMenuItem("Images", Icons.Outlined.Image, path = "$primaryPath/Pictures"),
-        DrawerMenuItem("Videos", Icons.Outlined.Movie, path = "$primaryPath/Movies"),
-        DrawerMenuItem("Documents", Icons.Outlined.Description, path = "$primaryPath/Documents"),
-        DrawerMenuItem("Music", Icons.Outlined.MusicNote, path = "$primaryPath/Music"),
-        DrawerMenuItem("APKs", Icons.Outlined.Memory, path = "$primaryPath/Download"),
+        DrawerMenuItem(stringResource(R.string.drawer_home), Icons.Outlined.Home, route = Routes.HOME),
+        DrawerMenuItem(stringResource(R.string.home_internal_storage), Icons.Outlined.SdStorage, path = primaryPath),
+        DrawerMenuItem(stringResource(R.string.drawer_downloads), Icons.Outlined.Download, path = "$primaryPath/Download"),
+        DrawerMenuItem(stringResource(R.string.category_images), Icons.Outlined.Image, path = "$primaryPath/Pictures"),
+        DrawerMenuItem(stringResource(R.string.category_videos), Icons.Outlined.Movie, path = "$primaryPath/Movies"),
+        DrawerMenuItem(stringResource(R.string.category_documents), Icons.Outlined.Description, path = "$primaryPath/Documents"),
+        DrawerMenuItem(stringResource(R.string.category_music), Icons.Outlined.MusicNote, path = "$primaryPath/Music"),
+        DrawerMenuItem(stringResource(R.string.category_apks), Icons.Outlined.Memory, path = "$primaryPath/Download"),
         DrawerMenuItem("", Icons.Outlined.Folder, isSection = true),
-        DrawerMenuItem("Cleaner", Icons.Outlined.CleaningServices, route = Routes.FLAT_DUPLICATES_FILE_MANAGER),
-        DrawerMenuItem("Storage Analyzer", Icons.Outlined.Analytics, route = Routes.ANALYZER),
-        DrawerMenuItem("Image Optimiser", Icons.Outlined.PhotoSizeSelectLarge, route = Routes.OPTIMISE_IMAGES),
-        DrawerMenuItem("Recycle Bin", Icons.Outlined.DeleteOutline, route = Routes.TRASH),
+        DrawerMenuItem(stringResource(R.string.home_tool_cleaner), Icons.Outlined.CleaningServices, route = Routes.FLAT_DUPLICATES_FILE_MANAGER),
+        DrawerMenuItem(stringResource(R.string.drawer_storage_analyzer), Icons.Outlined.Analytics, route = Routes.ANALYZER),
+        DrawerMenuItem(stringResource(R.string.drawer_image_optimiser), Icons.Outlined.PhotoSizeSelectLarge, route = Routes.OPTIMISE_IMAGES),
+        DrawerMenuItem(stringResource(R.string.home_tool_recycle_bin), Icons.Outlined.DeleteOutline, route = Routes.TRASH),
         DrawerMenuItem("", Icons.Outlined.Folder, isSection = true),
-        DrawerMenuItem("Settings", Icons.Outlined.Settings, route = Routes.SETTINGS),
+        DrawerMenuItem(stringResource(R.string.drawer_settings), Icons.Outlined.Settings, route = Routes.SETTINGS),
     )
 
     ModalDrawerSheet {
         // App header
         Text(
-            text = "Your Files",
+            text = stringResource(R.string.app_name),
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp),
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "File Manager v1.0",
+            text = stringResource(R.string.drawer_file_manager_subtitle),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 16.dp),

@@ -6,14 +6,14 @@ import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.rememberDrawerState
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
-import androidx.navigation.NavOptions
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.core.tween
+import androidx.navigation.compose.rememberNavController
 import androidx.room.Room
 import coil3.ImageLoader
 import coil3.request.CachePolicy
@@ -31,17 +31,21 @@ import androidx.compose.runtime.rememberCoroutineScope
 
 class App : Application() {
 
-    private lateinit var navController: NavHostController
+    @Deprecated("Use LocalNavController CompositionLocal instead")
+    lateinit var navController: NavHostController
+        private set
 
     lateinit var imageLoader: ImageLoader
 
     lateinit var db: AppDatabase
 
 
+    @Deprecated("Use LocalNavController.current inside Composables instead")
     fun navController(): NavHostController {
         return instance.navController
     }
 
+    @Deprecated("Use CompositionLocalProvider(LocalNavController provides navController) instead")
     fun initNavController(navController: NavHostController) {
         this.navController = navController
     }
@@ -87,24 +91,27 @@ fun YourFilesApp(
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    com.yourfiles.manager.app.uim3.theme.AppTheme {
-        ModalNavigationDrawer(
-            drawerState = drawerState,
-            drawerContent = {
-                com.yourfiles.manager.presentation.ui.components.ESDrawerContent(drawerState)
-            },
-        ) {
-            NavHost(
-                modifier = modifier,
-                navController = App.instance.navController(),
-                startDestination = startDestination,
-                // ZERO transitions — prevent ghost overlay and flash on back navigation
-                enterTransition = { EnterTransition.None },
-                exitTransition = { ExitTransition.None },
-                popEnterTransition = { EnterTransition.None },
-                popExitTransition = { ExitTransition.None },
-                builder = buildAppGraph(drawerState, scope)
-            )
+    val navController = rememberNavController()
+
+    CompositionLocalProvider(LocalNavController provides navController) {
+        com.yourfiles.manager.app.uim3.theme.AppTheme {
+            ModalNavigationDrawer(
+                drawerState = drawerState,
+                drawerContent = {
+                    com.yourfiles.manager.presentation.ui.components.ESDrawerContent(drawerState)
+                },
+            ) {
+                NavHost(
+                    modifier = modifier,
+                    navController = navController,
+                    startDestination = startDestination,
+                    enterTransition = { EnterTransition.None },
+                    exitTransition = { ExitTransition.None },
+                    popEnterTransition = { EnterTransition.None },
+                    popExitTransition = { ExitTransition.None },
+                    builder = buildAppGraph(drawerState, scope, navController)
+                )
+            }
         }
     }
 }

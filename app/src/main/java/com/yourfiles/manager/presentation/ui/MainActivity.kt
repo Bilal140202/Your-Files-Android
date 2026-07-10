@@ -24,7 +24,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.core.app.ActivityCompat
-import androidx.navigation.compose.rememberNavController
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
@@ -107,7 +106,6 @@ class MainActivity : AppCompatActivity() {
                     )
                 }
                 else -> {
-                    App.instance.initNavController(rememberNavController())
                     YourFilesApp(startDestination = com.yourfiles.manager.app.Routes.HOME)
                 }
             }

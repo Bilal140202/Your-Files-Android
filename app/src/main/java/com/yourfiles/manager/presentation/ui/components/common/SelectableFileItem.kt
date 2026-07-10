@@ -14,9 +14,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.yourfiles.manager.app.App
+import com.yourfiles.manager.app.LocalNavController
 import com.yourfiles.manager.app.Routes
-import com.yourfiles.manager.app.ui.IconModifier
+import com.yourfiles.manager.app.ui.iconModifier
 import com.yourfiles.manager.data.model.LocalFile
 import com.yourfiles.manager.presentation.ui.components.common.FileItemCompose
 
@@ -31,13 +31,13 @@ fun SelectableFileItem(
     onLongClickOnItem: (() -> Unit)? = null,
     category: String = "",
 ) {
+    val navController = LocalNavController.current
     Box(contentAlignment = Alignment.Center) {
         FileItemCompose(
             file = file,
             thumbnailSize = thumbnailSize,
             onClick = {
                 // Always navigate on item click, regardless of enabled state
-                val navController = App.instance.navController()
                 val fileUrl = Uri.encode(file.id)
                 val encodedCategory = Uri.encode(category)
                 
@@ -59,7 +59,7 @@ fun SelectableFileItem(
                 } // We handle the click through the Box's clickable modifier
             )
         }
-        if (showInfo != null) Icon(Icons.Filled.Info, "info", modifier = IconModifier
+        if (showInfo != null) Icon(Icons.Filled.Info, "info", modifier = iconModifier()
             .clickable {
                 showInfo()
             }

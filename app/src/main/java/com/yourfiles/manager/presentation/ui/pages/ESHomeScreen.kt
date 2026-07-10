@@ -26,11 +26,6 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.Analytics
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.DeleteOutline
-import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.Memory
-import androidx.compose.material.icons.outlined.Movie
-import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material.icons.outlined.PhotoSizeSelectLarge
 import androidx.compose.material.icons.outlined.SdStorage
 import androidx.compose.material.icons.outlined.Search
@@ -54,10 +49,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import androidx.core.content.getSystemService
+import com.yourfiles.manager.R
 import com.yourfiles.manager.app.Routes
 import com.yourfiles.manager.presentation.vm.CategoryType
+import com.yourfiles.manager.app.uim3.theme.CATEGORY_COLORS
+import com.yourfiles.manager.app.uim3.theme.CATEGORY_ICONS
+import com.yourfiles.manager.presentation.vm.StorageCategory
 import java.io.File
 
 /** Storage volume info for home screen cards. */
@@ -114,7 +114,10 @@ private fun getVolumeInfos(context: android.content.Context): List<VolumeInfo> {
 
         volumes.add(
             VolumeInfo(
-                name = if (volume.isPrimary) "Internal Storage" else "SD Card",
+                name = if (volume.isPrimary)
+                    context.getString(R.string.home_internal_storage)
+                else
+                    context.getString(R.string.home_sd_card),
                 path = path,
                 totalBytes = total,
                 freeBytes = free,
@@ -138,18 +141,18 @@ fun ESHomeScreen(
     val primaryPath = Environment.getExternalStorageDirectory().absolutePath
 
     val categories = listOf(
-        CategoryItem("Images", Icons.Outlined.Image, Color(0xFFE91E63), CategoryType.IMAGES),
-        CategoryItem("Videos", Icons.Outlined.Movie, Color(0xFF9C27B0), CategoryType.VIDEOS),
-        CategoryItem("Documents", Icons.Outlined.Description, Color(0xFF2196F3), CategoryType.DOCUMENTS),
-        CategoryItem("Music", Icons.Outlined.MusicNote, Color(0xFFFF9800), CategoryType.AUDIO),
-        CategoryItem("APKs", Icons.Outlined.Memory, Color(0xFF4CAF50), CategoryType.APK),
+        CategoryItem(stringResource(R.string.category_images), CATEGORY_ICONS[StorageCategory.IMAGES]!!, CATEGORY_COLORS[StorageCategory.IMAGES]!!, CategoryType.IMAGES),
+        CategoryItem(stringResource(R.string.category_videos), CATEGORY_ICONS[StorageCategory.VIDEOS]!!, CATEGORY_COLORS[StorageCategory.VIDEOS]!!, CategoryType.VIDEOS),
+        CategoryItem(stringResource(R.string.category_documents), CATEGORY_ICONS[StorageCategory.DOCUMENTS]!!, CATEGORY_COLORS[StorageCategory.DOCUMENTS]!!, CategoryType.DOCUMENTS),
+        CategoryItem(stringResource(R.string.category_music), CATEGORY_ICONS[StorageCategory.AUDIO]!!, CATEGORY_COLORS[StorageCategory.AUDIO]!!, CategoryType.AUDIO),
+        CategoryItem(stringResource(R.string.category_apks), CATEGORY_ICONS[StorageCategory.APK]!!, CATEGORY_COLORS[StorageCategory.APK]!!, CategoryType.APK),
     )
 
     val tools = listOf(
-        ToolItem("Cleaner", Icons.Outlined.CleaningServices, Routes.FLAT_DUPLICATES_FILE_MANAGER),
-        ToolItem("Analyzer", Icons.Outlined.Analytics, Routes.ANALYZER),
-        ToolItem("Optimise", Icons.Outlined.PhotoSizeSelectLarge, Routes.OPTIMISE_IMAGES),
-        ToolItem("Recycle Bin", Icons.Outlined.DeleteOutline, Routes.TRASH),
+        ToolItem(stringResource(R.string.home_tool_cleaner), Icons.Outlined.CleaningServices, Routes.FLAT_DUPLICATES_FILE_MANAGER),
+        ToolItem(stringResource(R.string.home_tool_analyzer), Icons.Outlined.Analytics, Routes.ANALYZER),
+        ToolItem(stringResource(R.string.home_tool_optimise), Icons.Outlined.PhotoSizeSelectLarge, Routes.OPTIMISE_IMAGES),
+        ToolItem(stringResource(R.string.home_tool_recycle_bin), Icons.Outlined.DeleteOutline, Routes.TRASH),
     )
 
     // Detect all storage volumes
@@ -161,7 +164,7 @@ fun ESHomeScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Your Files",
+                        text = stringResource(R.string.app_name),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                     )
@@ -174,7 +177,7 @@ fun ESHomeScreen(
                         androidx.compose.material3.IconButton(onClick = onOpenDrawer) {
                             Icon(
                                 imageVector = Icons.Filled.Menu,
-                                contentDescription = "Menu",
+                                contentDescription = stringResource(R.string.cd_menu),
                             )
                         }
                     }
@@ -186,7 +189,7 @@ fun ESHomeScreen(
                         }) {
                             Icon(
                                 imageVector = Icons.Outlined.Search,
-                                contentDescription = "Search",
+                                contentDescription = stringResource(R.string.cd_search),
                             )
                         }
                     }
@@ -413,7 +416,7 @@ private fun StorageCard(
 
             Spacer(modifier = Modifier.height(1.dp))
             Text(
-                text = "${Formatter.formatShortFileSize(context, volume.freeBytes)} free of ${Formatter.formatShortFileSize(context, volume.totalBytes)}",
+                text = stringResource(R.string.home_free_of, Formatter.formatShortFileSize(context, volume.freeBytes), Formatter.formatShortFileSize(context, volume.totalBytes)),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 9.sp,

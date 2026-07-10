@@ -164,4 +164,126 @@
     <string name="onboarding_tablet_optimised">High-res tablet optimised</string>
     <string name="onboarding_light_mode">Light</string>
     <string name="onboarding_dark_mode">Dark</string>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- Shared Category Labels                                               -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <string name="category_images">Images</string>
+    <string name="category_videos">Videos</string>
+    <string name="category_documents">Documents</string>
+    <string name="category_music">Music</string>
+    <string name="category_audio">Audio</string>
+    <string name="category_apks">APKs</string>
+    <string name="category_archives">Archives</string>
+    <string name="category_other">Other</string>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- Home Screen (ESHomeScreen)                                           -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <string name="home_internal_storage">Internal Storage</string>
+    <string name="home_sd_card">SD Card</string>
+    <string name="home_free_of">%1$s free of %2$s</string>
+    <string name="home_tool_cleaner">Cleaner</string>
+    <string name="home_tool_analyzer">Analyzer</string>
+    <string name="home_tool_optimise">Optimise</string>
+    <string name="home_tool_recycle_bin">Recycle Bin</string>
+    <string name="cd_menu">Menu</string>
+    <string name="cd_search">Search</string>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- Drawer (DrawerContent)                                               -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <string name="drawer_home">Home</string>
+    <string name="drawer_downloads">Downloads</string>
+    <string name="drawer_settings">Settings</string>
+    <string name="drawer_storage_analyzer">Storage Analyzer</string>
+    <string name="drawer_image_optimiser">Image Optimiser</string>
+    <string name="drawer_file_manager_subtitle">File Manager v1.0</string>
+    <string name="drawer_section_categories">Categories</string>
+    <string name="drawer_section_tools">Tools</string>
+    <string name="drawer_section_other">Other</string>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- Storage Analyzer (StorageAnalyzerScreen)                              -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <string name="analyzer_scanning">Scanning storage…</string>
+    <string name="analyzer_error">Error</string>
+    <string name="analyzer_retry">Retry</string>
+    <string name="analyzer_category_breakdown">Category Breakdown</string>
+    <string name="analyzer_top_largest_files">Top %d Largest Files</string>
+    <string name="analyzer_recently_added">Recently Added</string>
+    <string name="analyzer_cleanup_suggestions">Cleanup Suggestions</string>
+    <string name="analyzer_rescan_storage">Rescan Storage</string>
+    <string name="analyzer_total">Total</string>
+    <string name="analyzer_used">Used</string>
+    <string name="analyzer_available">Available</string>
+    <string name="analyzer_scanned">Scanned</string>
+    <string name="analyzer_scanned_files">Scanned %s files</string>
+    <string name="analyzer_files_count">%d files</string>
+    <string name="analyzer_percent_used">%d%% used</string>
+    <string name="analyzer_scan_progress">%1$d%% · %2$s files</string>
+    <string name="analyzer_today">Today</string>
+    <string name="analyzer_yesterday">Yesterday</string>
+    <string name="analyzer_days_ago">%d days ago</string>
+    <string name="analyzer_back">Back</string>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- Trash (TrashPage)                                                    -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <string name="trash_empty_description">Deleted files will appear here and can be restored</string>
+    <string name="trash_empty_trash">Empty Trash</string>
+    <string name="trash_empty_trash_confirmation">Permanently delete all %d items in trash? This action cannot be undone.</string>
+    <string name="trash_empty_button">Empty</string>
+    <string name="trash_restore_file">Restore File</string>
+    <string name="trash_restore">Restore</string>
+    <string name="trash_restoring">Restoring…</string>
+    <string name="trash_moving_back">Moving file back to its original location</string>
+    <string name="trash_emptying">Emptying Trash…</string>
+    <string name="trash_permanently_deleting">Permanently deleting all trashed files</string>
+    <string name="trash_restore_confirmation">Restore \"%s\" to its original location?</string>
+    <plurals name="trash_item_count">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- Settings (SettingsPage)                                              -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <string name="settings_behaviour">Behaviour</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_version">Version</string>
+    <string name="settings_dark_mode_active">Currently active (following system)</string>
+    <string name="settings_dark_mode_inactive">Currently inactive (following system)</string>
+    <string name="settings_your_apps_suite">Your Apps Suite</string>
+    <string name="settings_privacy_policy">Privacy Policy</string>
+    <string name="settings_version_info">Your Files v1.0.0</string>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- File Browser (FileBrowserScreen)                                     -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <string name="browser_new_folder">New Folder</string>
+    <string name="browser_folder_name">Folder name</string>
+    <string name="browser_create">Create</string>
+    <string name="browser_move_to_recycle_bin">Move to Recycle Bin</string>
+    <string name="browser_move_to_bin_confirmation">Move %1$d selected items to the Recycle Bin? You can restore them later from the Trash.</string>
+    <string name="browser_move_to_bin">Move to Bin</string>
+    <string name="browser_rename">Rename</string>
+    <string name="browser_new_name">New name</string>
+    <string name="browser_more_options">More options</string>
+    <string name="browser_share">Share</string>
+    <string name="browser_properties">Properties</string>
+    <string name="browser_details">Details</string>
+    <string name="browser_no_matches_found">No matches found</string>
+    <string name="browser_folder_empty">This folder is empty</string>
+    <string name="browser_try_different_search">Try a different search term</string>
+    <string name="browser_error">Error</string>
+    <string name="browser_retry">Retry</string>
+    <string name="browser_copy">Copy</string>
+    <string name="browser_cut">Cut</string>
+    <string name="browser_delete">Delete</string>
+    <string name="browser_more">More</string>
+    <string name="browser_organise">Organise</string>
+    <string name="browser_paste">Paste</string>
+    <string name="browser_items_count">%d items</string>
+    <string name="browser_search_in">Search in %s</string>
 </resources>

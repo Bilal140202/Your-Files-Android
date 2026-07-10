@@ -46,7 +46,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.yourfiles.manager.app.App
+import com.yourfiles.manager.app.LocalNavController
 import com.yourfiles.manager.data.model.LocalFile
 import com.yourfiles.manager.presentation.ui.components.BackNavigationIconCompose
 import com.yourfiles.manager.presentation.ui.components.VideoPlayer
@@ -129,7 +129,7 @@ fun FileDetailViewerCompose(
     }
 
     val infoPopUpVisibility = remember { mutableStateOf(false) }
-    val navigator = remember { App.instance.navController() }
+    val navigator = LocalNavController.current
     val showDeleteDialog = remember { vm.showDeleteDialog }
     val isDeleting = remember { vm.isDeleting }
     val context = LocalContext.current

@@ -95,6 +95,10 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.yourfiles.manager.app.uim3.theme.FolderColor
+import com.yourfiles.manager.app.uim3.theme.categoryColorForExtension
+import androidx.compose.ui.res.stringResource
+import com.yourfiles.manager.R
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
@@ -103,9 +107,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.yourfiles.manager.app.App
+import com.yourfiles.manager.app.LocalNavController
 import com.yourfiles.manager.app.Routes
 import com.yourfiles.manager.domain.model.FileItem
+import com.yourfiles.manager.presentation.ui.components.common.EmptyStateView
 import com.yourfiles.manager.presentation.vm.FileExplorerViewModel
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
@@ -121,6 +126,7 @@ fun FileBrowserScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
+    val navController = LocalNavController.current
     val displayItems = state.displayItems
 
     var showCreateFolderDialog by remember { mutableStateOf(false) }
@@ -198,12 +204,12 @@ fun FileBrowserScreen(
     if (showCreateFolderDialog) {
         AlertDialog(
             onDismissRequest = { showCreateFolderDialog = false },
-            title = { Text("New Folder") },
+            title = { Text(stringResource(R.string.browser_new_folder)) },
             text = {
                 OutlinedTextField(
                     value = newFolderName,
                     onValueChange = { newFolderName = it },
-                    label = { Text("Folder name") },
+                    label = { Text(stringResource(R.string.browser_folder_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -218,10 +224,10 @@ fun FileBrowserScreen(
                         }
                     },
                     enabled = newFolderName.isNotBlank(),
-                ) { Text("Create") }
+                ) { Text(stringResource(R.string.browser_create)) }
             },
             dismissButton = {
-                TextButton(onClick = { showCreateFolderDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showCreateFolderDialog = false }) { Text(stringResource(R.string.action_cancel)) }
             },
         )
     }
@@ -230,15 +236,15 @@ fun FileBrowserScreen(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Move to Recycle Bin") },
-            text = { Text("Move ${state.selectedItems.size} selected item${if (state.selectedItems.size != 1) "s" else ""} to the Recycle Bin? You can restore them later from the Trash.") },
+            title = { Text(stringResource(R.string.browser_move_to_recycle_bin)) },
+            text = { Text(stringResource(R.string.browser_move_to_bin_confirmation, state.selectedItems.size)) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteSelected { showDeleteDialog = false }
-                }) { Text("Move to Bin", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.browser_move_to_bin), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showDeleteDialog = false }) { Text(stringResource(R.string.action_cancel)) }
             },
         )
     }
@@ -247,12 +253,12 @@ fun FileBrowserScreen(
     if (showRenameDialog) {
         AlertDialog(
             onDismissRequest = { showRenameDialog = false },
-            title = { Text("Rename") },
+            title = { Text(stringResource(R.string.browser_rename)) },
             text = {
                 OutlinedTextField(
                     value = renameInput,
                     onValueChange = { renameInput = it },
-                    label = { Text("New name") },
+                    label = { Text(stringResource(R.string.browser_new_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -267,10 +273,10 @@ fun FileBrowserScreen(
                         }
                     },
                     enabled = renameInput.isNotBlank() && renameInput != java.io.File(renamePath).name,
-                ) { Text("Rename") }
+                ) { Text(stringResource(R.string.browser_rename)) }
             },
             dismissButton = {
-                TextButton(onClick = { showRenameDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showRenameDialog = false }) { Text(stringResource(R.string.action_cancel)) }
             },
         )
     }
@@ -288,15 +294,16 @@ fun FileBrowserScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    text = "More options",
+                    text = stringResource(R.string.browser_more_options),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(bottom = 16.dp),
                 )
 
                 // Share
+                val shareTitle = stringResource(R.string.browser_share)
                 BottomSheetAction(
                     icon = Icons.Outlined.Share,
-                    label = "Share",
+                    label = shareTitle,
                     onClick = {
                         showMoreSheet = false
                         val firstFile = state.selectedItems.firstOrNull() ?: return@BottomSheetAction
@@ -310,7 +317,7 @@ fun FileBrowserScreen(
                                 putExtra(Intent.EXTRA_STREAM, uri)
                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             }
-                            context.startActivity(Intent.createChooser(shareIntent, "Share"))
+                            context.startActivity(Intent.createChooser(shareIntent, shareTitle))
                         }
                     },
                 )
@@ -320,7 +327,7 @@ fun FileBrowserScreen(
                 // Properties / Info
                 BottomSheetAction(
                     icon = Icons.Outlined.Info,
-                    label = "Properties",
+                    label = stringResource(R.string.browser_properties),
                     onClick = {
                         showMoreSheet = false
                         val firstFile = state.selectedItems.firstOrNull() ?: return@BottomSheetAction
@@ -334,7 +341,7 @@ fun FileBrowserScreen(
                 // Details (same as properties for now)
                 BottomSheetAction(
                     icon = Icons.Outlined.Info,
-                    label = "Details",
+                    label = stringResource(R.string.browser_details),
                     onClick = {
                         showMoreSheet = false
                         val firstFile = state.selectedItems.firstOrNull() ?: return@BottomSheetAction
@@ -360,7 +367,7 @@ fun FileBrowserScreen(
                     .padding(16.dp),
             ) {
                 Text(
-                    text = "Properties",
+                    text = stringResource(R.string.browser_properties),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(bottom = 12.dp),
                 )
@@ -398,7 +405,7 @@ fun FileBrowserScreen(
                         IconButton(onClick = { viewModel.selectAll() }) {
                             Icon(
                                 Icons.Outlined.SelectAll,
-                                contentDescription = "Select All",
+                                contentDescription = stringResource(R.string.action_select_all),
                                 tint = MaterialTheme.colorScheme.onPrimary,
                             )
                         }
@@ -420,7 +427,7 @@ fun FileBrowserScreen(
                         IconButton(onClick = { viewModel.exitMultiSelect() }) {
                             Icon(
                                 Icons.Filled.Close,
-                                contentDescription = "Cancel",
+                                contentDescription = stringResource(R.string.action_cancel),
                                 tint = MaterialTheme.colorScheme.onPrimary,
                             )
                         }
@@ -438,7 +445,7 @@ fun FileBrowserScreen(
                             onValueChange = { searchTextInput = it },
                             placeholder = {
                                 Text(
-                                    "Search in ${viewModel.getCurrentFolderName()}",
+                                    stringResource(R.string.browser_search_in, viewModel.getCurrentFolderName()),
                                     color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f),
                                 )
                             },
@@ -557,7 +564,7 @@ fun FileBrowserScreen(
                             IconButton(onClick = { showOverflowMenu = true }) {
                                 Icon(
                                     Icons.Filled.MoreVert,
-                                    contentDescription = "More options",
+                                    contentDescription = stringResource(R.string.browser_more_options),
                                     tint = MaterialTheme.colorScheme.onPrimary,
                                 )
                             }
@@ -566,10 +573,10 @@ fun FileBrowserScreen(
                                 onDismissRequest = { showOverflowMenu = false },
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("Organise") },
+                                    text = { Text(stringResource(R.string.browser_organise)) },
                                     onClick = {
                                         showOverflowMenu = false
-                                        App.instance.navController().navigate("${Routes.FOLDER_ORGANISER}?path=${Uri.encode(state.currentPath)}")
+                                        navController.navigate("${Routes.FOLDER_ORGANISER}?path=${Uri.encode(state.currentPath)}")
                                     },
                                 )
                             }
@@ -592,7 +599,7 @@ fun FileBrowserScreen(
                         onClick = { viewModel.pasteClipboard({}) },
                         containerColor = MaterialTheme.colorScheme.tertiary,
                     ) {
-                        Icon(Icons.Filled.ContentPaste, "Paste", tint = MaterialTheme.colorScheme.onTertiary)
+                        Icon(Icons.Filled.ContentPaste, stringResource(R.string.browser_paste), tint = MaterialTheme.colorScheme.onTertiary)
                     }
                 } else {
                     FloatingActionButton(
@@ -601,7 +608,7 @@ fun FileBrowserScreen(
                     ) {
                         Icon(
                             Icons.Outlined.CreateNewFolder,
-                            "New Folder",
+                            stringResource(R.string.browser_new_folder),
                             tint = MaterialTheme.colorScheme.onPrimary,
                         )
                     }
@@ -636,13 +643,13 @@ fun FileBrowserScreen(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = state.error ?: "Error",
+                        text = state.error ?: stringResource(R.string.browser_error),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.error,
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     TextButton(onClick = { viewModel.navigateTo(state.currentPath) }) {
-                        Text("Retry")
+                        Text(stringResource(R.string.browser_retry))
                     }
                 }
             }
@@ -672,37 +679,14 @@ fun FileBrowserScreen(
 
                 if (!state.isLoading && displayItems.isEmpty()) {
                     item {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                        ) {
-                            Icon(
-                                imageVector = if (state.searchQuery.isNotEmpty())
-                                    Icons.Outlined.Search
-                                else
-                                    Icons.Outlined.Folder,
-                                contentDescription = null,
-                                modifier = Modifier.size(64.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = if (state.searchQuery.isNotEmpty()) "No matches found" else "This folder is empty",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            if (state.searchQuery.isNotEmpty()) {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Try a different search term",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                )
-                            }
-                        }
+                        EmptyStateView(
+                            icon = if (state.searchQuery.isNotEmpty())
+                                Icons.Outlined.Search
+                            else
+                                Icons.Outlined.Folder,
+                            title = if (state.searchQuery.isNotEmpty()) stringResource(R.string.browser_no_matches_found) else stringResource(R.string.browser_folder_empty),
+                            subtitle = if (state.searchQuery.isNotEmpty()) stringResource(R.string.browser_try_different_search) else null,
+                        )
                     }
                 }
 
@@ -719,7 +703,7 @@ fun FileBrowserScreen(
                             } else if (item.isDirectory) {
                                 viewModel.navigateTo(item.path)
                             } else {
-                                App.instance.navController().navigate(
+                                navController.navigate(
                                     "${Routes.FILE_DETAIL_VIEWER}?url=${android.net.Uri.encode(item.path)}&category=file"
                                 )
                             }
@@ -765,33 +749,33 @@ private fun BottomActionBar(
         ) {
             BottomActionBtn(
                 icon = Icons.Filled.ContentCopy,
-                label = "Copy",
+                label = stringResource(R.string.browser_copy),
                 onClick = onCopy,
                 modifier = Modifier.weight(1f, fill = true),
             )
             BottomActionBtn(
                 icon = Icons.Filled.ContentCut,
-                label = "Cut",
+                label = stringResource(R.string.browser_cut),
                 onClick = onCut,
                 modifier = Modifier.weight(1f, fill = true),
             )
             BottomActionBtn(
                 icon = Icons.Outlined.Delete,
-                label = "Delete",
+                label = stringResource(R.string.browser_delete),
                 onClick = onDelete,
                 tint = MaterialTheme.colorScheme.error,
                 modifier = Modifier.weight(1f, fill = true),
             )
             BottomActionBtn(
                 icon = Icons.Outlined.DriveFileRenameOutline,
-                label = "Rename",
+                label = stringResource(R.string.browser_rename),
                 onClick = onRename,
                 enabled = canRename,
                 modifier = Modifier.weight(1f, fill = true),
             )
             BottomActionBtn(
                 icon = Icons.Filled.MoreVert,
-                label = "More",
+                label = stringResource(R.string.browser_more),
                 onClick = onMore,
                 modifier = Modifier.weight(1f, fill = true),
             )
@@ -945,7 +929,7 @@ private fun FileListItem(
         ) {
             Text(
                 text = if (item.isDirectory) {
-                    "${item.childCount} items"
+                    stringResource(R.string.browser_items_count, item.childCount)
                 } else {
                     Formatter.formatShortFileSize(context, item.size)
                 },
@@ -991,19 +975,11 @@ private fun getFileIcon(item: FileItem): ImageVector {
 
 private fun getFileIconColor(item: FileItem): Color {
     return if (item.isDirectory) {
-        Color(0xFFFF9800)
+        FolderColor
     } else {
         val name = item.name.lowercase()
-        when {
-            name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png") ||
-            name.endsWith(".gif") || name.endsWith(".webp") ->
-                Color(0xFFE91E63)
-            name.endsWith(".mp4") || name.endsWith(".mkv") || name.endsWith(".avi") ||
-            name.endsWith(".mov") ->
-                Color(0xFF9C27B0)
-            name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".flac") ->
-                Color(0xFFFF5722)
-            else -> Color(0xFF607D8B)
-        }
+        val dotIndex = name.lastIndexOf('.')
+        val extension = if (dotIndex >= 0) name.substring(dotIndex) else ""
+        categoryColorForExtension(extension)
     }
 }

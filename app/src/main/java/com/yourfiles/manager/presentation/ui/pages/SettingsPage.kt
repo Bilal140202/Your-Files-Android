@@ -83,7 +83,7 @@ fun SettingsPage() {
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
             // ── Behaviour Section ──────────────────────────────────────────
-            SettingsSectionHeader(title = "Behaviour")
+            SettingsSectionHeader(title = stringResource(R.string.settings_behaviour))
 
             Card(
                 modifier = Modifier
@@ -95,8 +95,8 @@ fun SettingsPage() {
             ) {
                 SettingsSwitchRow(
                     icon = Icons.Outlined.DeleteSweep,
-                    title = "Confirm before delete",
-                    subtitle = "Show a confirmation dialog before deleting files",
+                    title = stringResource(R.string.settings_confirm_delete),
+                    subtitle = stringResource(R.string.settings_confirm_delete_description),
                     checked = confirmBeforeDelete,
                     onCheckedChange = { checked ->
                         confirmBeforeDelete = checked
@@ -108,7 +108,7 @@ fun SettingsPage() {
             Spacer(modifier = Modifier.height(8.dp))
 
             // ── Appearance Section ─────────────────────────────────────────
-            SettingsSectionHeader(title = "Appearance")
+            SettingsSectionHeader(title = stringResource(R.string.settings_appearance))
 
             Card(
                 modifier = Modifier
@@ -120,10 +120,10 @@ fun SettingsPage() {
             ) {
                 SettingsSwitchRow(
                     icon = Icons.Outlined.DarkMode,
-                    title = "Dark Mode",
+                    title = stringResource(R.string.settings_dark_mode),
                     subtitle = when {
-                        systemDarkMode -> "Currently active (following system)"
-                        else -> "Currently inactive (following system)"
+                        systemDarkMode -> stringResource(R.string.settings_dark_mode_active)
+                        else -> stringResource(R.string.settings_dark_mode_inactive)
                     },
                     checked = systemDarkMode,
                     onCheckedChange = { /* Follows system – read only */ },
@@ -134,7 +134,7 @@ fun SettingsPage() {
             Spacer(modifier = Modifier.height(16.dp))
 
             // ── About Section ──────────────────────────────────────────────
-            SettingsSectionHeader(title = "About")
+            SettingsSectionHeader(title = stringResource(R.string.settings_about))
 
             Card(
                 modifier = Modifier
@@ -146,15 +146,15 @@ fun SettingsPage() {
             ) {
                 SettingsInfoRow(
                     icon = Icons.Outlined.Info,
-                    title = "Your Apps Suite",
-                    description = "Part of Your Apps suite \u2013 YourNotes, Your Gallery, Your Files"
+                    title = stringResource(R.string.settings_your_apps_suite),
+                    description = stringResource(R.string.settings_about_text)
                 )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
             // ── Privacy Section ───────────────────────────────────────────
-            SettingsSectionHeader(title = "Privacy")
+            SettingsSectionHeader(title = stringResource(R.string.settings_privacy))
 
             Card(
                 modifier = Modifier
@@ -166,15 +166,15 @@ fun SettingsPage() {
             ) {
                 SettingsInfoRow(
                     icon = Icons.Outlined.Shield,
-                    title = "Privacy Policy",
-                    description = "No data collected, all processing on-device"
+                    title = stringResource(R.string.settings_privacy_policy),
+                    description = stringResource(R.string.settings_privacy_text)
                 )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
             // ── Version Section ────────────────────────────────────────────
-            SettingsSectionHeader(title = "Version")
+            SettingsSectionHeader(title = stringResource(R.string.settings_version))
 
             Card(
                 modifier = Modifier
@@ -186,8 +186,8 @@ fun SettingsPage() {
             ) {
                 SettingsInfoRow(
                     icon = Icons.Outlined.VerifiedUser,
-                    title = "Your Files",
-                    description = "Your Files v1.0.0"
+                    title = stringResource(R.string.app_name),
+                    description = stringResource(R.string.settings_version_info)
                 )
             }
 
