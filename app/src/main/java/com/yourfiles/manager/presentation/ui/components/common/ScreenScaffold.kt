@@ -1,6 +1,8 @@
 package com.yourfiles.manager.presentation.ui.components.common
 
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
@@ -16,11 +18,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.RowScope
+import com.yourfiles.manager.app.uim3.theme.Spacing
 
 /**
  * Reusable scaffold that eliminates the repeated Scaffold + TopAppBar + BackButton pattern.
  *
  * @param title       Text shown in the top app bar.
+ * @param subtitle    Optional subtitle text below the title.
  * @param onBack      If provided, shows a back-arrow icon that calls this lambda.
  * @param onOpenDrawer If provided (and [onBack] is null), shows a hamburger-menu icon.
  * @param actions     Optional composable slot for top-app-bar trailing actions.
@@ -30,6 +34,7 @@ import androidx.compose.foundation.layout.RowScope
 @Composable
 fun ScreenScaffold(
     title: String,
+    subtitle: String? = null,
     onBack: (() -> Unit)? = null,
     onOpenDrawer: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
@@ -39,11 +44,21 @@ fun ScreenScaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
+                    Column {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        if (subtitle != null) {
+                            Spacer(modifier = Modifier.height(Spacing.xs))
+                            Text(
+                                text = subtitle,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f),
+                            )
+                        }
+                    }
                 },
                 navigationIcon = {
                     if (onBack != null) {

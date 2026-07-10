@@ -55,8 +55,10 @@ import androidx.core.content.getSystemService
 import com.yourfiles.manager.R
 import com.yourfiles.manager.app.Routes
 import com.yourfiles.manager.presentation.vm.CategoryType
+import com.yourfiles.manager.app.uim3.theme.AppColors
 import com.yourfiles.manager.app.uim3.theme.CATEGORY_COLORS
 import com.yourfiles.manager.app.uim3.theme.CATEGORY_ICONS
+import com.yourfiles.manager.app.uim3.theme.Spacing
 import com.yourfiles.manager.presentation.vm.StorageCategory
 import java.io.File
 
@@ -235,7 +237,7 @@ fun ESHomeScreen(
                     StorageCard(
                         volume = sdVol,
                         modifier = Modifier.weight(1f),
-                        color = Color(0xFF4CAF50),
+                        color = AppColors.CategoryApk,
                         onClick = { onNavigateToExplorer(sdVol.path) },
                     )
                 }
@@ -256,7 +258,7 @@ fun ESHomeScreen(
                     Column(
                         modifier = Modifier
                             .size(48.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(12.dp))
                             .clickable {
                                 onNavigateToRoute("${Routes.MEDIA_STORE_CATEGORY}/${cat.categoryType.key}")
                             },
@@ -267,13 +269,13 @@ fun ESHomeScreen(
                             imageVector = cat.icon,
                             contentDescription = cat.label,
                             tint = cat.color,
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(Spacing.iconMedium),
                         )
-                        Spacer(modifier = Modifier.height(1.dp))
+                        Spacer(modifier = Modifier.height(Spacing.xs))
                         Text(
                             text = cat.label,
                             style = MaterialTheme.typography.labelSmall,
-                            fontSize = 9.sp,
+                            fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
                             maxLines = 1,
@@ -299,7 +301,7 @@ fun ESHomeScreen(
                         modifier = Modifier
                             .weight(1f)
                             .clickable { onNavigateToRoute(tool.route) },
-                        shape = RoundedCornerShape(6.dp),
+                        shape = RoundedCornerShape(12.dp),
                         color = MaterialTheme.colorScheme.surface,
                     ) {
                         Column(
@@ -312,13 +314,13 @@ fun ESHomeScreen(
                                 imageVector = tool.icon,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(22.dp),
+                                modifier = Modifier.size(Spacing.iconMedium),
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = tool.label,
                                 style = MaterialTheme.typography.labelSmall,
-                                fontSize = 10.sp,
+                                fontSize = 11.sp,
                                 textAlign = TextAlign.Center,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -351,7 +353,7 @@ private fun StorageCard(
         modifier = modifier
             .fillMaxHeight()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(6.dp),
+        shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surface,
     ) {
         Column(modifier = Modifier.padding(10.dp)) {

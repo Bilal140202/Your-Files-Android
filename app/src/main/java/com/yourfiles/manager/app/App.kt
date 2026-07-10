@@ -8,6 +8,11 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
@@ -105,10 +110,10 @@ fun YourFilesApp(
                     modifier = modifier,
                     navController = navController,
                     startDestination = startDestination,
-                    enterTransition = { EnterTransition.None },
-                    exitTransition = { ExitTransition.None },
-                    popEnterTransition = { EnterTransition.None },
-                    popExitTransition = { ExitTransition.None },
+                    enterTransition = { fadeIn(animationSpec = tween(300)) + slideInHorizontally(initialOffsetX = { it / 3 }, animationSpec = tween(300)) },
+                    exitTransition = { fadeOut(animationSpec = tween(200)) + slideOutHorizontally(targetOffsetX = { -it / 3 }, animationSpec = tween(200)) },
+                    popEnterTransition = { fadeIn(animationSpec = tween(300)) + slideInHorizontally(initialOffsetX = { -it / 3 }, animationSpec = tween(300)) },
+                    popExitTransition = { fadeOut(animationSpec = tween(200)) + slideOutHorizontally(targetOffsetX = { it / 3 }, animationSpec = tween(200)) },
                     builder = buildAppGraph(drawerState, scope, navController)
                 )
             }

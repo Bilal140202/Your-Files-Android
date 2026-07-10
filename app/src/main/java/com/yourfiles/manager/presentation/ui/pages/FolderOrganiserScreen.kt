@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.FolderOpen
@@ -27,18 +26,14 @@ import androidx.compose.material.icons.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material.icons.outlined.Sort
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -54,6 +49,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.yourfiles.manager.app.uim3.theme.AppColors
+import com.yourfiles.manager.app.uim3.theme.getCategoryColorForFileCategory
+import com.yourfiles.manager.presentation.ui.components.common.EmptyStateView
+import com.yourfiles.manager.presentation.ui.components.common.ErrorStateView
+import com.yourfiles.manager.presentation.ui.components.common.LoadingStateView
+import com.yourfiles.manager.presentation.ui.components.common.ScreenScaffold
 import com.yourfiles.manager.presentation.vm.FileCategory
 import com.yourfiles.manager.presentation.vm.FolderOrganiserState
 import com.yourfiles.manager.presentation.vm.FolderOrganiserViewModel
@@ -61,68 +62,40 @@ import com.yourfiles.manager.presentation.vm.GroupHeader
 import com.yourfiles.manager.presentation.vm.OrganiserFileItem
 import com.yourfiles.manager.presentation.vm.SortOption
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FolderOrganiserScreen(
     viewModel: FolderOrganiserViewModel = viewModel(),
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
-    val navController = com.yourfiles.manager.app.LocalNavController.current
     var showSortMenu by remember { mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Organise: ${state.folderName}",
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+    ScreenScaffold(
+        title = "Organise: ${state.folderName}",
+        onBack = { com.yourfiles.manager.app.LocalNavController.current.popBackStack() },
+        actions = {
+            Box {
+                IconButton(onClick = { showSortMenu = true }) {
+                    Icon(
+                        Icons.Outlined.Sort,
+                        contentDescription = "Sort",
                     )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onPrimary,
+                }
+                DropdownMenu(
+                    expanded = showSortMenu,
+                    onDismissRequest = { showSortMenu = false },
+                ) {
+                    SortOption.entries.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(option.label) },
+                            onClick = {
+                                viewModel.setSortOption(option)
+                                showSortMenu = false
+                            },
                         )
                     }
-                },
-                actions = {
-                    // Sort dropdown
-                    Box {
-                        IconButton(onClick = { showSortMenu = true }) {
-                            Icon(
-                                Icons.Outlined.Sort,
-                                contentDescription = "Sort",
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = showSortMenu,
-                            onDismissRequest = { showSortMenu = false },
-                        ) {
-                            SortOption.entries.forEach { option ->
-                                DropdownMenuItem(
-                                    text = { Text(option.label) },
-                                    onClick = {
-                                        viewModel.setSortOption(option)
-                                        showSortMenu = false
-                                    },
-                                )
-                            }
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                ),
-            )
+                }
+            }
         },
     ) { padding ->
         Column(
@@ -155,26 +128,13 @@ fun FolderOrganiserScreen(
 
             // --- Content ---
             if (state.isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator()
-                }
+                LoadingStateView()
             } else if (state.error != null) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = state.error ?: "Unknown error",
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
+                ErrorStateView(message = state.error ?: "Unknown error")
             } else {
                 val displayItems = state.displayItems
                 if (displayItems.isEmpty()) {
-                    com.yourfiles.manager.presentation.ui.components.common.EmptyStateView(
+                    EmptyStateView(
                         icon = Icons.Outlined.FolderOpen,
                         title = "Empty folder",
                         subtitle = "No files to organise",
@@ -202,6 +162,11 @@ fun FolderOrganiserScreen(
                                         item = item,
                                         formattedDate = viewModel.formatDate(item.lastModified),
                                         formattedSize = if (item.isDirectory) "" else Formatter.formatFileSize(context, item.size),
+                                    )
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(start = 56.dp),
+                                        thickness = 0.5.dp,
+                                        color = MaterialTheme.colorScheme.outlineVariant,
                                     )
                                 }
                             }
@@ -338,16 +303,8 @@ private fun getFileIconFor(item: OrganiserFileItem): ImageVector {
 
 private fun getFileIconColorFor(item: OrganiserFileItem): Color {
     return if (item.isDirectory) {
-        Color(0xFFFF9800)
+        AppColors.FolderColor
     } else {
-        when (item.category) {
-            FileCategory.IMAGES -> Color(0xFFE91E63)
-            FileCategory.VIDEOS -> Color(0xFF9C27B0)
-            FileCategory.AUDIO -> Color(0xFFFF5722)
-            FileCategory.DOCUMENTS -> Color(0xFF1976D2)
-            FileCategory.APK -> Color(0xFF4CAF50)
-            FileCategory.ARCHIVES -> Color(0xFF795548)
-            FileCategory.OTHER -> Color(0xFF607D8B)
-        }
+        getCategoryColorForFileCategory(item.category)
     }
 }

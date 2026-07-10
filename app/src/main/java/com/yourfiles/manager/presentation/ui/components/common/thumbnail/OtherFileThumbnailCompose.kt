@@ -17,7 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.graphics.toColorInt
+import com.yourfiles.manager.app.uim3.theme.AppColors
 
 @Composable
 fun OtherFileThumbnailCompose(
@@ -59,16 +59,15 @@ fun FileTypeIcon(extension: String, modifier: Modifier = Modifier) {
 }
 
 fun fileTypeColor(extension: String): Color {
-    val colorInt = when (extension.lowercase()) {
-        "pdf" -> "#E53935".toColorInt()
-        "doc", "docx" -> "#1E88E5".toColorInt()
-        "xls", "xlsx" -> "#43A047".toColorInt()
-        "ppt", "pptx" -> "#FB8C00".toColorInt()
-        "mp3", "wav" -> "#8E24AA".toColorInt()
-        "mp4", "mkv" -> "#3949AB".toColorInt()
-        "apk" -> "#2E7D32".toColorInt()
-        "zip", "rar" -> "#6D4C41".toColorInt()
-        else -> "#757575".toColorInt()
+    return when (extension.lowercase()) {
+        "pdf" -> AppColors.Error
+        "doc", "docx" -> AppColors.CategoryDocuments
+        "xls", "xlsx" -> AppColors.CategoryApk
+        "ppt", "pptx" -> AppColors.Warning
+        "mp3", "wav" -> AppColors.CategoryVideos
+        "mp4", "mkv" -> AppColors.Info
+        "apk" -> AppColors.CategoryApk
+        "zip", "rar" -> AppColors.CategoryArchives
+        else -> AppColors.CategoryOther
     }
-    return Color(colorInt)
 }

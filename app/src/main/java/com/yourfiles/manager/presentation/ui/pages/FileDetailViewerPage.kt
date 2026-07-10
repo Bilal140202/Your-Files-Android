@@ -41,7 +41,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -176,7 +175,7 @@ fun FileDetailViewerCompose(
     }
 
     Scaffold(
-        containerColor = Color.Black, // opaque black bg — prevent ghost overlay
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { Text(currentFile?.fileName ?: "", fontSize = 14.sp) },
@@ -206,14 +205,14 @@ fun FileDetailViewerCompose(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(Color.Black),
+                .background(MaterialTheme.colorScheme.surface),
             contentAlignment = Alignment.Center,
         ) {
             // No loading spinner — content appears instantly for direct files
             if (currentFiles.isEmpty()) {
                 Text(
                     text = "File not found",
-                    color = Color.White.copy(alpha = 0.6f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 return@Scaffold
@@ -227,7 +226,7 @@ fun FileDetailViewerCompose(
                 val file = currentFiles.getOrNull(pageIndex) ?: return@HorizontalPager
 
                 Box(
-                    modifier = Modifier.fillMaxSize().background(Color.Black),
+                    modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface),
                     contentAlignment = Alignment.Center,
                 ) {
                     // ── Universal file type dispatcher ──
@@ -258,9 +257,9 @@ fun FileDetailViewerCompose(
                                 launchApkInstaller(context, filePath)
                             }
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                CircularProgressIndicator(color = Color.White)
+                                CircularProgressIndicator(color = MaterialTheme.colorScheme.onSurface)
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Text("Opening installer...", color = Color.White.copy(alpha = 0.7f))
+                                Text("Opening installer...", color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
 
@@ -270,9 +269,9 @@ fun FileDetailViewerCompose(
                                 openWithSystemChooser(context, filePath, mime)
                             }
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                CircularProgressIndicator(color = Color.White)
+                                CircularProgressIndicator(color = MaterialTheme.colorScheme.onSurface)
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Text("Opening...", color = Color.White.copy(alpha = 0.7f))
+                                Text("Opening...", color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }

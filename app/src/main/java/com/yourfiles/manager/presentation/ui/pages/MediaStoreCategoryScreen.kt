@@ -16,34 +16,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.Memory
-import androidx.compose.material.icons.outlined.Movie
-import androidx.compose.material.icons.outlined.MusicNote
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -51,9 +35,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.yourfiles.manager.app.LocalNavController
 import com.yourfiles.manager.app.Routes
+import com.yourfiles.manager.app.uim3.theme.getCategoryColor
+import com.yourfiles.manager.app.uim3.theme.getCategoryIcon
 import com.yourfiles.manager.domain.model.FileItem
+import com.yourfiles.manager.presentation.ui.components.common.EmptyStateView
+import com.yourfiles.manager.presentation.ui.components.common.ErrorStateView
+import com.yourfiles.manager.presentation.ui.components.common.LoadingStateView
+import com.yourfiles.manager.presentation.ui.components.common.ScreenScaffold
 import com.yourfiles.manager.presentation.vm.CategoryType
-import com.yourfiles.manager.presentation.vm.CategoryUiState
 import com.yourfiles.manager.presentation.vm.MediaStoreCategoryVM
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -68,7 +57,6 @@ import java.util.Locale
  * - Thumbnails for images/videos via Coil
  * - Direct MediaStore query, no Paging 3 tokens
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MediaStoreCategoryScreen(
     categoryType: CategoryType,
@@ -76,44 +64,12 @@ fun MediaStoreCategoryScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val navController = LocalNavController.current
+    val subtitle = if (state.totalCount > 0) "%,d items".format(state.totalCount) else null
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = categoryType.label,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        if (state.totalCount > 0) {
-                            Text(
-                                text = "%,d items".format(state.totalCount),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f),
-                            )
-                        }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = {
-                        navController.popBackStack()
-                    }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                ),
-            )
-        },
+    ScreenScaffold(
+        title = categoryType.label,
+        subtitle = subtitle,
+        onBack = { navController.popBackStack() },
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -121,43 +77,20 @@ fun MediaStoreCategoryScreen(
                 .padding(paddingValues),
         ) {
             when {
-                // Loading spinner
                 state.isLoading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .align(Alignment.Center),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
+                    LoadingStateView()
                 }
-                // Error
                 state.error != null -> {
-                    Column(
-                        modifier = Modifier.align(Alignment.Center),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Text(
-                            text = state.error ?: "Error",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        TextButton(onClick = { viewModel.retry() }) {
-                            Text("Retry")
-                        }
-                    }
-                }
-                // Empty
-                state.items.isEmpty() -> {
-                    Text(
-                        text = "No ${categoryType.label.lowercase()} found",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.align(Alignment.Center),
+                    ErrorStateView(
+                        message = state.error ?: "Error",
+                        onRetry = { viewModel.retry() },
                     )
                 }
-                // File list
+                state.items.isEmpty() -> {
+                    EmptyStateView(
+                        title = "No ${categoryType.label.lowercase()} found",
+                    )
+                }
                 else -> {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
@@ -279,20 +212,4 @@ private fun CategoryFileRow(
             }
         }
     }
-}
-
-private fun getCategoryIcon(type: CategoryType): ImageVector = when (type) {
-    CategoryType.IMAGES -> Icons.Outlined.Image
-    CategoryType.VIDEOS -> Icons.Outlined.Movie
-    CategoryType.AUDIO -> Icons.Outlined.MusicNote
-    CategoryType.DOCUMENTS -> Icons.Outlined.Description
-    CategoryType.APK -> Icons.Outlined.Memory
-}
-
-private fun getCategoryColor(type: CategoryType): Color = when (type) {
-    CategoryType.IMAGES -> Color(0xFFE91E63)
-    CategoryType.VIDEOS -> Color(0xFF9C27B0)
-    CategoryType.AUDIO -> Color(0xFFFF9800)
-    CategoryType.DOCUMENTS -> Color(0xFF2196F3)
-    CategoryType.APK -> Color(0xFF4CAF50)
 }

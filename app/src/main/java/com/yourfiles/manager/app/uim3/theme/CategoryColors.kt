@@ -9,17 +9,20 @@ import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material.icons.outlined.QuestionMark
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.yourfiles.manager.presentation.vm.CategoryType
+import com.yourfiles.manager.presentation.vm.FileCategory
 import com.yourfiles.manager.presentation.vm.StorageCategory
 
 /** Colors for each storage category. */
 internal val CATEGORY_COLORS = mapOf(
-    StorageCategory.IMAGES to Color(0xFFE91E63),
-    StorageCategory.VIDEOS to Color(0xFF9C27B0),
-    StorageCategory.AUDIO to Color(0xFFFF9800),
-    StorageCategory.DOCUMENTS to Color(0xFF2196F3),
-    StorageCategory.APK to Color(0xFF4CAF50),
-    StorageCategory.ARCHIVES to Color(0xFF795548),
-    StorageCategory.OTHER to Color(0xFF607D8B),
+    StorageCategory.IMAGES to AppColors.CategoryImages,
+    StorageCategory.VIDEOS to AppColors.CategoryVideos,
+    StorageCategory.AUDIO to AppColors.CategoryAudio,
+    StorageCategory.DOCUMENTS to AppColors.CategoryDocuments,
+    StorageCategory.APK to AppColors.CategoryApk,
+    StorageCategory.ARCHIVES to AppColors.CategoryArchives,
+    StorageCategory.OTHER to AppColors.CategoryOther,
 )
 
 /** Icons for each storage category. */
@@ -45,7 +48,7 @@ internal val CATEGORY_FOLDERS = mapOf(
 )
 
 /** Color used for folder icons in the file browser. */
-val FolderColor = Color(0xFFFF9800)
+val FolderColor: Color get() = AppColors.FolderColor
 
 /** Image file extensions (lowercase, with leading dot). */
 private val IMAGE_EXTENSIONS = setOf(".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp")
@@ -68,4 +71,41 @@ fun categoryColorForExtension(extension: String): Color {
         extension in AUDIO_EXTENSIONS -> CATEGORY_COLORS[StorageCategory.AUDIO]!!
         else -> CATEGORY_COLORS[StorageCategory.OTHER]!!
     }
+}
+
+// ── CategoryType (MediaStore) helpers ─────────────────────────────────────
+
+private val CATEGORY_TYPE_TO_STORAGE = mapOf(
+    CategoryType.IMAGES to StorageCategory.IMAGES,
+    CategoryType.VIDEOS to StorageCategory.VIDEOS,
+    CategoryType.AUDIO to StorageCategory.AUDIO,
+    CategoryType.DOCUMENTS to StorageCategory.DOCUMENTS,
+    CategoryType.APK to StorageCategory.APK,
+)
+
+/** Get the category color for a [CategoryType] (used by MediaStore screens). */
+fun getCategoryColor(type: CategoryType): Color {
+    return CATEGORY_COLORS[CATEGORY_TYPE_TO_STORAGE[type]] ?: AppColors.CategoryOther
+}
+
+/** Get the category icon for a [CategoryType] (used by MediaStore screens). */
+fun getCategoryIcon(type: CategoryType): ImageVector {
+    return CATEGORY_ICONS[CATEGORY_TYPE_TO_STORAGE[type]] ?: Icons.Outlined.QuestionMark
+}
+
+// ── FileCategory (FolderOrganiser) helpers ────────────────────────────────
+
+private val FILE_CATEGORY_TO_STORAGE = mapOf(
+    FileCategory.IMAGES to StorageCategory.IMAGES,
+    FileCategory.VIDEOS to StorageCategory.VIDEOS,
+    FileCategory.AUDIO to StorageCategory.AUDIO,
+    FileCategory.DOCUMENTS to StorageCategory.DOCUMENTS,
+    FileCategory.APK to StorageCategory.APK,
+    FileCategory.ARCHIVES to StorageCategory.ARCHIVES,
+    FileCategory.OTHER to StorageCategory.OTHER,
+)
+
+/** Get the category color for a [FileCategory] (used by FolderOrganiser screen). */
+fun getCategoryColorForFileCategory(type: FileCategory): Color {
+    return CATEGORY_COLORS[FILE_CATEGORY_TO_STORAGE[type]] ?: AppColors.CategoryOther
 }

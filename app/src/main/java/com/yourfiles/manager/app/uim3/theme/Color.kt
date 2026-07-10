@@ -139,3 +139,26 @@ val onSurfaceDarkHighContrast = Color(0xFFFFFFFF)
 val surfaceVariantDarkHighContrast = Color(0xFF2C2C2C)
 val onSurfaceVariantDarkHighContrast = Color(0xFFFFFFFF)
 val outlineDarkHighContrast = Color(0xFFE0E0E0)
+
+// ── Semantic & Category Colors ────────────────────────────────────────────
+object AppColors {
+    val Success = Color(0xFF4CAF50)
+    val Warning = Color(0xFFFF9800)
+    val Info = Color(0xFF2196F3)
+    val Error = Color(0xFFE53935)
+
+    // MiXplorer-inspired dark navy for dark theme
+    val DarkNavy = Color(0xFF0D1D2E)
+    val DarkSurface = Color(0xFF152238)
+    val DarkCard = Color(0xFF1A2D47)
+
+    // Category colors - single source of truth
+    val CategoryImages = Color(0xFFE91E63)
+    val CategoryVideos = Color(0xFF9C27B0)
+    val CategoryAudio = Color(0xFFFF9800)
+    val CategoryDocuments = Color(0xFF2196F3)
+    val CategoryApk = Color(0xFF4CAF50)
+    val CategoryArchives = Color(0xFF795548)
+    val CategoryOther = Color(0xFF607D8B)
+    val FolderColor = Color(0xFFFF9800)
+}
