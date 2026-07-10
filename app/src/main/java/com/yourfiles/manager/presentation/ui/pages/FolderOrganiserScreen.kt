@@ -69,10 +69,11 @@ fun FolderOrganiserScreen(
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
     var showSortMenu by remember { mutableStateOf(false) }
+    val navController = com.yourfiles.manager.app.LocalNavController.current
 
     ScreenScaffold(
         title = "Organise: ${state.folderName}",
-        onBack = { com.yourfiles.manager.app.LocalNavController.current.popBackStack() },
+        onBack = { navController.popBackStack() },
         actions = {
             Box {
                 IconButton(onClick = { showSortMenu = true }) {

@@ -1,5 +1,6 @@
 package com.yourfiles.manager.presentation.ui.components.common
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
