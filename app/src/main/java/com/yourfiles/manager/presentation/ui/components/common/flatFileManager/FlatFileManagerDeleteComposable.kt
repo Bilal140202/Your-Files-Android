@@ -11,14 +11,13 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.yourfiles.manager.presentation.ui.components.common.ConfirmDialog
 import com.yourfiles.manager.presentation.ui.components.common.PopupCompose
 import com.yourfiles.manager.presentation.vm.SelectableDeletableVM
 
@@ -44,36 +43,36 @@ fun FlatFileManagerDeleteComposable(vm: SelectableDeletableVM, selectedSize: Lon
         }
     }
 
-    if (showDeleteDialog.value || isDeleting.value) {
-        PopupCompose(show = true, onPopupDismissed = { if (!isDeleting.value) vm.cancelDelete() }) {
+    // Confirmation dialog – uses reusable ConfirmDialog
+    if (showDeleteDialog.value && !isDeleting.value) {
+        PopupCompose(show = true, onPopupDismissed = { vm.cancelDelete() }) {
+            ConfirmDialog(
+                title = "Move to Recycle Bin",
+                message = "Move ${selectedFiles.value.size} files ($formattedSize) to the Recycle Bin? You can restore them later from the Trash.",
+                confirmText = "Move to Bin",
+                dismissText = "Cancel",
+                onConfirm = { vm.confirmDeleteFiles() },
+                onDismiss = { vm.cancelDelete() },
+            )
+        }
+    }
+
+    // Progress dialog (cannot use ConfirmDialog for this state)
+    if (isDeleting.value) {
+        PopupCompose(show = true, onPopupDismissed = { }) {
             AlertDialog(
-                onDismissRequest = { if (!isDeleting.value) vm.cancelDelete() },
-                title = { Text(if (isDeleting.value) "Moving to Recycle Bin..." else "Move to Recycle Bin") },
+                onDismissRequest = { },
+                title = { Text("Moving to Recycle Bin...") },
                 text = {
-                    if (isDeleting.value) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Moving ${selectedFiles.value.size} files to Recycle Bin, please wait...")
-                            Spacer(modifier = Modifier.height(16.dp))
-                            CircularProgressIndicator(
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                    } else {
-                        Text("Move ${selectedFiles.value.size} files ($formattedSize) to the Recycle Bin? You can restore them later from the Trash.")
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Moving ${selectedFiles.value.size} files to Recycle Bin, please wait...")
+                        Spacer(modifier = Modifier.height(16.dp))
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.primary,
+                        )
                     }
                 },
-                confirmButton = {
-                    if (!isDeleting.value) {
-                        TextButton(onClick = { vm.confirmDeleteFiles() }) {
-                            Text("Move to Bin", color = Color.Red)
-                        }
-                    }
-                },
-                dismissButton = {
-                    if (!isDeleting.value) {
-                        TextButton(onClick = { vm.cancelDelete() }) { Text("Cancel") }
-                    }
-                }
+                confirmButton = { },
             )
         }
     }

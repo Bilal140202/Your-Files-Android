@@ -49,7 +49,7 @@ import androidx.compose.material.icons.outlined.DriveFileRenameOutline
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.InsertDriveFile
+import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material.icons.outlined.Search
@@ -416,7 +416,7 @@ fun FileBrowserScreen(
                         ) {
                             Icon(
                                 Icons.Outlined.SwapHoriz,
-                                contentDescription = "Select Interval",
+                                contentDescription = stringResource(R.string.cd_select_interval),
                                 tint = if (state.isIntervalMode)
                                     Color.Yellow
                                 else
@@ -480,7 +480,7 @@ fun FileBrowserScreen(
                         }) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Close search",
+                                contentDescription = stringResource(R.string.cd_close_search),
                                 tint = MaterialTheme.colorScheme.onPrimary,
                             )
                         }
@@ -493,7 +493,7 @@ fun FileBrowserScreen(
                             }) {
                                 Icon(
                                     Icons.Filled.Clear,
-                                    contentDescription = "Clear",
+                                    contentDescription = stringResource(R.string.cd_clear),
                                     tint = MaterialTheme.colorScheme.onPrimary,
                                 )
                             }
@@ -547,7 +547,7 @@ fun FileBrowserScreen(
                         IconButton(onClick = onOpenDrawer) {
                             Icon(
                                 Icons.Filled.Menu,
-                                contentDescription = "Drawer",
+                                contentDescription = stringResource(R.string.cd_menu),
                                 tint = MaterialTheme.colorScheme.onPrimary,
                             )
                         }
@@ -556,7 +556,7 @@ fun FileBrowserScreen(
                         IconButton(onClick = { isSearchActive = true }) {
                             Icon(
                                 Icons.Outlined.Search,
-                                contentDescription = "Search",
+                                contentDescription = stringResource(R.string.cd_search),
                                 tint = MaterialTheme.colorScheme.onPrimary,
                             )
                         }
@@ -890,14 +890,14 @@ private fun FileListItem(
             if (isSelected) {
                 Icon(
                     Icons.Filled.CheckCircle,
-                    contentDescription = "Selected",
+                    contentDescription = stringResource(R.string.cd_selected),
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.primary,
                 )
             } else {
                 Icon(
                     Icons.Filled.RadioButtonUnchecked,
-                    contentDescription = "Not selected",
+                    contentDescription = stringResource(R.string.cd_not_selected),
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -968,7 +968,7 @@ private fun getFileIcon(item: FileItem): ImageVector {
             name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".flac") ||
             name.endsWith(".aac") || name.endsWith(".ogg") ->
                 Icons.Outlined.MusicNote
-            else -> Icons.Outlined.InsertDriveFile
+            else -> Icons.AutoMirrored.Outlined.InsertDriveFile
         }
     }
 }

@@ -39,7 +39,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -166,15 +165,15 @@ fun PdfViewerScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White),
+            .background(MaterialTheme.colorScheme.surface),
         contentAlignment = Alignment.Center,
     ) {
         when {
             loadError != null -> {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(loadError!!, color = Color.Red, fontSize = 16.sp)
+                    Text(loadError!!, color = MaterialTheme.colorScheme.error, fontSize = 16.sp)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("File: $fileName", color = Color.Gray, fontSize = 12.sp)
+                    Text("File: $fileName", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 }
             }
             loading -> {
@@ -184,16 +183,16 @@ fun PdfViewerScreen(
                     if (fileSizeMB > 10) {
                         Text(
                             "Loading PDF (${"%.1f".format(fileSizeMB)} MB)...",
-                            color = Color.Gray,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 14.sp,
                         )
                     } else {
-                        Text("Loading PDF...", color = Color.Gray, fontSize = 14.sp)
+                        Text("Loading PDF...", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                     }
                 }
             }
             pageCount == 0 && !loading -> {
-                Text("Empty PDF", color = Color.Gray, fontSize = 14.sp)
+                Text("Empty PDF", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
             }
             else -> {
                 Column(modifier = Modifier.fillMaxSize()) {
@@ -289,7 +288,7 @@ private fun PdfPageView(
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Page ${pageIndex + 1}", color = Color.Gray, fontSize = 12.sp)
+                Text("Page ${pageIndex + 1}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
             }
         }
         return
@@ -304,7 +303,7 @@ private fun PdfPageView(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.surface)
             .pointerInput(Unit) {
                 detectTapGestures(
                     onDoubleTap = {
@@ -357,7 +356,7 @@ private fun PdfBottomNavBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFFF5F5F5))
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -369,7 +368,7 @@ private fun PdfBottomNavBar(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                 contentDescription = "Previous page",
-                tint = if (currentPage > 1) MaterialTheme.colorScheme.primary else Color.LightGray,
+                tint = if (currentPage > 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
             )
         }
 
@@ -379,7 +378,7 @@ private fun PdfBottomNavBar(
         Text(
             text = "$currentPage / $totalPages",
             fontSize = 16.sp,
-            color = Color.DarkGray,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f),
         )
 
@@ -393,7 +392,7 @@ private fun PdfBottomNavBar(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = "Next page",
-                tint = if (currentPage < totalPages) MaterialTheme.colorScheme.primary else Color.LightGray,
+                tint = if (currentPage < totalPages) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
             )
         }
     }

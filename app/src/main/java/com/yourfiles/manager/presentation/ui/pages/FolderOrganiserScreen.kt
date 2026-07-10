@@ -22,10 +22,10 @@ import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.InsertDriveFile
+import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.MusicNote
-import androidx.compose.material.icons.outlined.Sort
+import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -46,9 +46,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.yourfiles.manager.R
 import com.yourfiles.manager.app.uim3.theme.AppColors
 import com.yourfiles.manager.app.uim3.theme.getCategoryColorForFileCategory
 import com.yourfiles.manager.presentation.ui.components.common.EmptyStateView
@@ -72,14 +74,14 @@ fun FolderOrganiserScreen(
     val navController = com.yourfiles.manager.app.LocalNavController.current
 
     ScreenScaffold(
-        title = "Organise: ${state.folderName}",
+        title = stringResource(R.string.organise_title, state.folderName),
         onBack = { navController.popBackStack() },
         actions = {
             Box {
                 IconButton(onClick = { showSortMenu = true }) {
                     Icon(
-                        Icons.Outlined.Sort,
-                        contentDescription = "Sort",
+                        Icons.AutoMirrored.Outlined.Sort,
+                        contentDescription = stringResource(R.string.cd_sort),
                     )
                 }
                 DropdownMenu(
@@ -115,7 +117,7 @@ fun FolderOrganiserScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Group by type",
+                    text = stringResource(R.string.organise_group_by_type),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
                 )
@@ -131,14 +133,14 @@ fun FolderOrganiserScreen(
             if (state.isLoading) {
                 LoadingStateView()
             } else if (state.error != null) {
-                ErrorStateView(message = state.error ?: "Unknown error")
+                ErrorStateView(message = state.error ?: stringResource(R.string.organise_unknown_error))
             } else {
                 val displayItems = state.displayItems
                 if (displayItems.isEmpty()) {
                     EmptyStateView(
                         icon = Icons.Outlined.FolderOpen,
-                        title = "Empty folder",
-                        subtitle = "No files to organise",
+                        title = stringResource(R.string.organise_empty_folder),
+                        subtitle = stringResource(R.string.organise_no_files),
                     )
                 } else {
                     LazyColumn(
@@ -189,7 +191,7 @@ private fun SummaryBar(state: FolderOrganiserState, context: android.content.Con
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
-            text = "${state.fileCount} file${if (state.fileCount != 1) "s" else ""}",
+            text = stringResource(R.string.organise_file_count, state.fileCount),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -202,7 +204,7 @@ private fun SummaryBar(state: FolderOrganiserState, context: android.content.Con
         )
         Spacer(modifier = Modifier.weight(1f))
         Text(
-            text = "Sort: ${state.sortOption.label}",
+            text = stringResource(R.string.organise_sort_label, state.sortOption.label),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -225,7 +227,7 @@ private fun GroupHeaderRow(header: GroupHeader) {
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = "(${header.count})",
+            text = stringResource(R.string.organise_group_header_count, header.count),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -297,7 +299,7 @@ private fun getFileIconFor(item: OrganiserFileItem): ImageVector {
             FileCategory.DOCUMENTS -> Icons.Outlined.Description
             FileCategory.APK -> Icons.Outlined.Android
             FileCategory.ARCHIVES -> Icons.Outlined.Archive
-            FileCategory.OTHER -> Icons.Outlined.InsertDriveFile
+            FileCategory.OTHER -> Icons.AutoMirrored.Outlined.InsertDriveFile
         }
     }
 }

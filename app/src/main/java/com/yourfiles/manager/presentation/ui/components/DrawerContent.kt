@@ -52,10 +52,17 @@ private data class DrawerMenuItem(
 )
 
 @Composable
-fun ESDrawerContent(drawerState: DrawerState) {
+fun ESDrawerContent(drawerState: DrawerState, currentRoute: String? = null) {
     val scope = rememberCoroutineScope()
     val navController = LocalNavController.current
     val primaryPath = Environment.getExternalStorageDirectory().absolutePath
+
+    // Resolve the actual explorer path when on an explorer route
+    val currentExplorerPath = if (currentRoute?.startsWith(Routes.EXPLORER) == true) {
+        navController.currentBackStackEntry?.arguments?.getString("path")
+    } else {
+        null
+    }
 
     fun navigate(routeOrPath: String, isRoute: Boolean) {
         scope.launch { drawerState.close() }
@@ -124,10 +131,18 @@ fun ESDrawerContent(drawerState: DrawerState) {
                     lastWasSection = true
                 } else {
                     lastWasSection = false
+                    val selected = when {
+                        item.route != null -> currentRoute == item.route
+                        item.path != null -> {
+                            currentRoute?.startsWith(Routes.EXPLORER) == true &&
+                                currentExplorerPath == item.path
+                        }
+                        else -> false
+                    }
                     NavigationDrawerItem(
                         icon = { Icon(item.icon, contentDescription = null, modifier = Modifier.height(24.dp)) },
                         label = { Text(item.label, style = MaterialTheme.typography.bodyMedium) },
-                        selected = false,
+                        selected = selected,
                         onClick = {
                             if (item.route != null) navigate(item.route, true)
                             else if (item.path != null) navigate(item.path, false)

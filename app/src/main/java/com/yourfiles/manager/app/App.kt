@@ -31,29 +31,17 @@ import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.foundation.isSystemInDarkTheme
 
 
 class App : Application() {
 
-    @Deprecated("Use LocalNavController CompositionLocal instead")
-    lateinit var navController: NavHostController
-        private set
-
     lateinit var imageLoader: ImageLoader
 
     lateinit var db: AppDatabase
-
-
-    @Deprecated("Use LocalNavController.current inside Composables instead")
-    fun navController(): NavHostController {
-        return instance.navController
-    }
-
-    @Deprecated("Use CompositionLocalProvider(LocalNavController provides navController) instead")
-    fun initNavController(navController: NavHostController) {
-        this.navController = navController
-    }
 
     override fun onCreate() {
         super.onCreate()
@@ -61,6 +49,7 @@ class App : Application() {
         initDB()
         initLibraries()
         SavedMemoryTracker.initialize()
+        DarkModeSetting.load(applicationContext)
         CoroutineScope(Dispatchers.IO).launch {
             TrashManager.cleanupOldTrash(applicationContext)
         }
@@ -98,12 +87,24 @@ fun YourFilesApp(
 
     val navController = rememberNavController()
 
+    // ── Dark mode ─────────────────────────────────────────────────────────────
+    val systemDark = isSystemInDarkTheme()
+    val darkModeValue by remember { DarkModeSetting.currentSetting }
+    val darkTheme = when (darkModeValue) {
+        "dark"  -> true
+        "light" -> false
+        else    -> systemDark
+    }
+
     CompositionLocalProvider(LocalNavController provides navController) {
-        com.yourfiles.manager.app.uim3.theme.AppTheme {
+        com.yourfiles.manager.app.uim3.theme.AppTheme(darkTheme = darkTheme) {
             ModalNavigationDrawer(
                 drawerState = drawerState,
                 drawerContent = {
-                    com.yourfiles.manager.presentation.ui.components.ESDrawerContent(drawerState)
+                    com.yourfiles.manager.presentation.ui.components.ESDrawerContent(
+                        drawerState,
+                        currentRoute = navController.currentDestination?.route,
+                    )
                 },
             ) {
                 NavHost(

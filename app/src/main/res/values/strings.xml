@@ -66,6 +66,12 @@
     <string name="cd_info">Info</string>
     <string name="cd_delete">Delete</string>
     <string name="cd_app_logo">App Logo</string>
+    <string name="cd_select_interval">Select Interval</string>
+    <string name="cd_close_search">Close search</string>
+    <string name="cd_clear">Clear</string>
+    <string name="cd_selected">Selected</string>
+    <string name="cd_not_selected">Not selected</string>
+    <string name="cd_sort">Sort</string>
 
     <!-- Delete Files -->
     <string name="delete_files_title">Delete Files</string>
@@ -76,6 +82,9 @@
 
     <!-- Duplicates -->
     <string name="duplicates_count_label">%d Duplicates</string>
+    <string name="duplicates_no_duplicates_found">No duplicates found</string>
+    <string name="duplicates_all_unique">All your files are unique</string>
+    <string name="duplicates_delete_files_with_size">Delete %1$d files · %2$s</string>
 
     <!-- Auto-Select Best -->
     <string name="auto_select_best">Auto-Select Best</string>
@@ -117,6 +126,8 @@
     <string name="optimise_warning">This action is not reversible. The original images will be permanently replaced.</string>
     <string name="optimise_all_done_title">All images are optimised</string>
     <string name="optimise_all_done_subtitle">No JPEG images larger than 500 KB were found.</string>
+    <string name="optimise_fab_text">Optimise %1$d images · ~%2$s savings</string>
+    <string name="optimise_dialog_compress_description">This will compress %1$d JPEG images at %2$d%% quality, saving approximately %3$s.</string>
 
     <!-- Onboarding -->
     <string name="onboarding_duplicate_title">Duplicate Cleanup</string>
@@ -257,6 +268,29 @@
     <string name="settings_your_apps_suite">Your Apps Suite</string>
     <string name="settings_privacy_policy">Privacy Policy</string>
     <string name="settings_version_info">Your Files v1.0.0</string>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- Flat File Manager Delete (FlatFileManagerDeleteComposable)             -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <string name="flat_delete_button">Delete</string>
+    <string name="flat_delete_files_with_size">Delete %1$d files · %2$s</string>
+    <string name="flat_delete_moving_title">Moving to Recycle Bin…</string>
+    <string name="flat_delete_move_title">Move to Recycle Bin</string>
+    <string name="flat_delete_moving_progress">Moving %1$d files to Recycle Bin, please wait…</string>
+    <string name="flat_delete_confirmation">Move %1$d files (%2$s) to the Recycle Bin? You can restore them later from the Trash.</string>
+    <string name="flat_delete_move_to_bin">Move to Bin</string>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- Folder Organiser (FolderOrganiserScreen)                               -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <string name="organise_title">Organise: %s</string>
+    <string name="organise_group_by_type">Group by type</string>
+    <string name="organise_unknown_error">Unknown error</string>
+    <string name="organise_empty_folder">Empty folder</string>
+    <string name="organise_no_files">No files to organise</string>
+    <string name="organise_file_count">%d files</string>
+    <string name="organise_sort_label">Sort: %s</string>
+    <string name="organise_group_header_count">(%d)</string>
 
     <!-- ══════════════════════════════════════════════════════════════════════ -->
     <!-- File Browser (FileBrowserScreen)                                     -->

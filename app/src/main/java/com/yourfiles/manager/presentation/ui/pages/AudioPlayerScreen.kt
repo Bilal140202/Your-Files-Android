@@ -35,7 +35,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -145,7 +144,7 @@ fun AudioPlayerScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF1A1A2E)),
+            .background(MaterialTheme.colorScheme.surface),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -159,7 +158,7 @@ fun AudioPlayerScreen(
             if (playbackError != null) {
                 Text(
                     text = playbackError!!,
-                    color = Color(0xFFFF6B6B),
+                    color = MaterialTheme.colorScheme.error,
                     fontSize = 14.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(bottom = 16.dp),
@@ -171,7 +170,7 @@ fun AudioPlayerScreen(
                 modifier = Modifier
                     .size(160.dp)
                     .background(
-                        color = Color(0xFF2D2D44),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
                         shape = MaterialTheme.shapes.extraLarge,
                     ),
                 contentAlignment = Alignment.Center,
@@ -179,7 +178,7 @@ fun AudioPlayerScreen(
                 Icon(
                     imageVector = Icons.Filled.Info,
                     contentDescription = "Music",
-                    tint = Color(0xFF6C63FF),
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(80.dp),
                 )
             }
@@ -190,7 +189,7 @@ fun AudioPlayerScreen(
             Text(
                 text = fileName,
                 fontSize = 22.sp,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
@@ -202,7 +201,7 @@ fun AudioPlayerScreen(
             Text(
                 text = fileSize,
                 fontSize = 13.sp,
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
 
@@ -223,9 +222,9 @@ fun AudioPlayerScreen(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = SliderDefaults.colors(
-                        thumbColor = Color(0xFF6C63FF),
-                        activeTrackColor = Color(0xFF6C63FF),
-                        inactiveTrackColor = Color(0xFF3D3D5C),
+                        thumbColor = MaterialTheme.colorScheme.primary,
+                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                        inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
                     ),
                 )
 
@@ -239,25 +238,25 @@ fun AudioPlayerScreen(
                     Text(
                         text = formatTime(currentPositionMs.toLong()),
                         fontSize = 12.sp,
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
                         text = formatTime(totalDurationMs.toLong()),
                         fontSize = 12.sp,
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             } else if (isBuffering) {
                 // Show buffering state while duration is not yet known
                 androidx.compose.material3.CircularProgressIndicator(
-                    color = Color(0xFF6C63FF),
+                    color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(32.dp),
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Loading audio...",
                     fontSize = 12.sp,
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
@@ -275,14 +274,14 @@ fun AudioPlayerScreen(
                 modifier = Modifier
                     .size(72.dp)
                     .background(
-                        color = Color(0xFF6C63FF),
+                        color = MaterialTheme.colorScheme.primary,
                         shape = MaterialTheme.shapes.extraLarge,
                     ),
             ) {
                 Icon(
                     imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                     contentDescription = if (isPlaying) "Pause" else "Play",
-                    tint = Color.White,
+                    tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(40.dp),
                 )
             }
@@ -302,7 +301,7 @@ fun AudioPlayerScreen(
                     Icon(
                         imageVector = Icons.Filled.SkipPrevious,
                         contentDescription = "Rewind 10s",
-                        tint = Color.Gray,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(32.dp),
                     )
                 }
@@ -317,7 +316,7 @@ fun AudioPlayerScreen(
                     Icon(
                         imageVector = Icons.Filled.SkipNext,
                         contentDescription = "Forward 10s",
-                        tint = Color.Gray,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(32.dp),
                     )
                 }

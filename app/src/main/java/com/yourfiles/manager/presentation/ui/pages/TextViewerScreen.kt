@@ -20,6 +20,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,6 +44,7 @@ private const val MAX_INITIAL_BYTES = 500_000L // ~500KB shown initially
 fun TextViewerScreen(
     filePath: String,
 ) {
+    val scope = rememberCoroutineScope()
     var fileContent by remember(filePath) { mutableStateOf<String?>(null) }
     var isLoading by remember(filePath) { mutableStateOf(true) }
     var error by remember(filePath) { mutableStateOf<String?>(null) }
@@ -130,7 +132,7 @@ fun TextViewerScreen(
                             onClick = {
                                 showFull = true
                                 // Load full file in background
-                                kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
+                                scope.launch(Dispatchers.IO) {
                                     val text = try { file.readText(charset("UTF-8")) }
                                     catch (e: Exception) { fileContent!! }
                                     fullContent = text

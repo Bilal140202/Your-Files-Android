@@ -16,7 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.InsertDriveFile
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -33,7 +33,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -42,6 +41,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.yourfiles.manager.app.uim3.theme.AppColors
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 
@@ -142,7 +142,7 @@ fun ZipBrowserScreen(
     }
 
     Scaffold(
-        containerColor = Color.Black,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = {
@@ -157,7 +157,7 @@ fun ZipBrowserScreen(
                             Text(
                                 text = "$totalEntries entries · ${formatSize(totalSize)}",
                                 fontSize = 11.sp,
-                                color = Color.Gray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -181,7 +181,7 @@ fun ZipBrowserScreen(
             when {
                 currentError != null -> {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(currentError, color = Color.Red, fontSize = 14.sp)
+                        Text(currentError, color = AppColors.Error, fontSize = 14.sp)
                         Spacer(modifier = Modifier.height(8.dp))
                         TextButton(onClick = {
                             // Retry
@@ -192,11 +192,11 @@ fun ZipBrowserScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text("Reading archive...", color = Color.Gray, fontSize = 14.sp)
+                        Text("Reading archive...", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                     }
                 }
                 currentEntries.isNullOrEmpty() -> {
-                    Text("Empty archive", color = Color.Gray, fontSize = 14.sp)
+                    Text("Empty archive", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                 }
                 else -> {
                     LazyColumn(
@@ -223,9 +223,9 @@ private fun ZipEntryRow(entry: ZipEntryItem) {
     ) {
         // Icon: folder or file
         Icon(
-            imageVector = if (entry.isDirectory) Icons.Default.Folder else Icons.Default.InsertDriveFile,
+            imageVector = if (entry.isDirectory) Icons.Default.Folder else Icons.AutoMirrored.Default.InsertDriveFile,
             contentDescription = if (entry.isDirectory) "Folder" else "File",
-            tint = if (entry.isDirectory) Color(0xFFFFC107) else Color(0xFF90CAF9),
+            tint = if (entry.isDirectory) AppColors.FolderColor else MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(24.dp),
         )
 
@@ -236,7 +236,7 @@ private fun ZipEntryRow(entry: ZipEntryItem) {
             Text(
                 text = entry.displayName.ifEmpty { entry.name },
                 fontSize = 14.sp,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -250,7 +250,7 @@ private fun ZipEntryRow(entry: ZipEntryItem) {
                 Text(
                     text = parentPath,
                     fontSize = 11.sp,
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -265,14 +265,14 @@ private fun ZipEntryRow(entry: ZipEntryItem) {
                 Text(
                     text = entry.sizeText,
                     fontSize = 12.sp,
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             if (entry.dateText.isNotEmpty()) {
                 Text(
                     text = entry.dateText,
                     fontSize = 11.sp,
-                    color = Color.Gray.copy(alpha = 0.7f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 )
             }
         }

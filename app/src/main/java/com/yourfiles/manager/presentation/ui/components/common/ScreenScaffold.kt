@@ -29,6 +29,7 @@ import com.yourfiles.manager.app.uim3.theme.Spacing
  * @param onBack      If provided, shows a back-arrow icon that calls this lambda.
  * @param onOpenDrawer If provided (and [onBack] is null), shows a hamburger-menu icon.
  * @param actions     Optional composable slot for top-app-bar trailing actions.
+ * @param floatingActionButton Optional floating action button composable.
  * @param content     The main screen content, receiving [PaddingValues] from the scaffold.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,6 +40,7 @@ fun ScreenScaffold(
     onBack: (() -> Unit)? = null,
     onOpenDrawer: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
+    floatingActionButton: @Composable () -> Unit = {},
     content: @Composable (PaddingValues) -> Unit,
 ) {
     Scaffold(
@@ -87,6 +89,7 @@ fun ScreenScaffold(
                 ),
             )
         },
+        floatingActionButton = floatingActionButton,
         content = content,
     )
 }

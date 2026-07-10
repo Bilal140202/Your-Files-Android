@@ -97,8 +97,11 @@ fun ImageOptimiserPage(vm: ImageOptimiserVM = viewModel()) {
                         Text(stringResource(R.string.optimise_button))
                     } else {
                         Text(
-                            "Optimise ${selectedIds.value.size} ${if (selectedIds.value.size == 1) "image" else "images"}" +
-                                    " · ~${Formatter.formatFileSize(context, estimatedSavings)} savings"
+                            stringResource(
+                                R.string.optimise_fab_text,
+                                selectedIds.value.size,
+                                Formatter.formatFileSize(context, estimatedSavings)
+                            )
                         )
                     }
                 }
@@ -161,10 +164,12 @@ fun ImageOptimiserPage(vm: ImageOptimiserVM = viewModel()) {
                     } else {
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Text(
-                                "This will compress ${selectedIds.value.size} JPEG " +
-                                        "${if (selectedIds.value.size == 1) "image" else "images"} " +
-                                        "at ${ImageOptimizer.QUALITY}% quality, saving approximately " +
-                                        "${Formatter.formatFileSize(context, estimatedSavings)}."
+                                stringResource(
+                                    R.string.optimise_dialog_compress_description,
+                                    selectedIds.value.size,
+                                    ImageOptimizer.QUALITY,
+                                    Formatter.formatFileSize(context, estimatedSavings)
+                                )
                             )
                             Text(
                                 stringResource(R.string.optimise_warning),

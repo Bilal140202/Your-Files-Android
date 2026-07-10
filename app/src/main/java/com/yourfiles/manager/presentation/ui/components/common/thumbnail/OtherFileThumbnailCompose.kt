@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.InsertDriveFile
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -33,7 +33,7 @@ fun OtherFileThumbnailCompose(
     } else {
         // Fallback for when we don't have an extension
         Icon(
-            imageVector = Icons.Filled.InsertDriveFile,
+            imageVector = Icons.AutoMirrored.Filled.InsertDriveFile,
             contentDescription = null,
             modifier = modifier,
             tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)

@@ -48,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.yourfiles.manager.R
 import com.yourfiles.manager.presentation.ui.components.BackNavigationIconCompose
+import com.yourfiles.manager.presentation.ui.components.common.ConfirmDialog
 import com.yourfiles.manager.presentation.ui.components.common.EmptyStateView
 import com.yourfiles.manager.utils.TrashManager
 import kotlinx.coroutines.Dispatchers
@@ -234,24 +235,13 @@ fun TrashPage() {
 
     // ── Empty Trash confirmation dialog ──────────────────────────────────────
     if (showEmptyTrashDialog) {
-        AlertDialog(
-            onDismissRequest = { showEmptyTrashDialog = false },
-            title = { Text(stringResource(R.string.trash_empty_trash)) },
-            text = {
-                Text(
-                    stringResource(R.string.trash_empty_trash_confirmation, trashFiles.size)
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = emptyTrash) {
-                    Text(stringResource(R.string.trash_empty_button), color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showEmptyTrashDialog = false }) {
-                    Text(stringResource(R.string.action_cancel))
-                }
-            },
+        ConfirmDialog(
+            title = stringResource(R.string.trash_empty_trash),
+            message = stringResource(R.string.trash_empty_trash_confirmation, trashFiles.size),
+            confirmText = stringResource(R.string.trash_empty_button),
+            dismissText = stringResource(R.string.action_cancel),
+            onConfirm = emptyTrash,
+            onDismiss = { showEmptyTrashDialog = false },
         )
     }
 

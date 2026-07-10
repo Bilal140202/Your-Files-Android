@@ -15,7 +15,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Policy
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.VerifiedUser
 import androidx.compose.material3.Card
@@ -39,11 +38,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.yourfiles.manager.R
+import com.yourfiles.manager.app.DarkModeSetting
 import com.yourfiles.manager.presentation.ui.components.BackNavigationIconCompose
 
 private const val PREFS_NAME = "yourfiles_settings"
 private const val KEY_CONFIRM_BEFORE_DELETE = "confirm_before_delete"
-private const val KEY_DARK_MODE = "dark_mode"
 
 /**
  * Settings page for the Your Files app.
@@ -61,7 +60,21 @@ fun SettingsPage() {
     var confirmBeforeDelete by remember {
         mutableStateOf(prefs.getBoolean(KEY_CONFIRM_BEFORE_DELETE, true))
     }
+
+    // ── Dark mode 3-way toggle ────────────────────────────────────────────────
+    val darkModeSetting by remember { DarkModeSetting.currentSetting }
     val systemDarkMode = isSystemInDarkTheme()
+    val isEffectivelyDark = when (darkModeSetting) {
+        "dark"  -> true
+        "light" -> false
+        else    -> systemDarkMode
+    }
+    val darkModeLabel = when (darkModeSetting) {
+        "system" -> "System"
+        "dark"   -> "Dark"
+        "light"  -> "Light"
+        else     -> "System"
+    }
 
     Scaffold(
         topBar = {
@@ -121,13 +134,12 @@ fun SettingsPage() {
                 SettingsSwitchRow(
                     icon = Icons.Outlined.DarkMode,
                     title = stringResource(R.string.settings_dark_mode),
-                    subtitle = when {
-                        systemDarkMode -> stringResource(R.string.settings_dark_mode_active)
-                        else -> stringResource(R.string.settings_dark_mode_inactive)
+                    subtitle = darkModeLabel,
+                    checked = isEffectivelyDark,
+                    onCheckedChange = {
+                        DarkModeSetting.cycle(context)
                     },
-                    checked = systemDarkMode,
-                    onCheckedChange = { /* Follows system – read only */ },
-                    enabled = false,
+                    enabled = true,
                 )
             }
 

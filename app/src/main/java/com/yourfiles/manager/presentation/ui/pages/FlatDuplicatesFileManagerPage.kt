@@ -56,7 +56,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yourfiles.manager.R
 import com.yourfiles.manager.app.itemSpacing
@@ -194,7 +193,7 @@ fun DeleteButtonBottomBar(vm: FlatDuplicatesFileManagerVM = viewModel()) {
         if (selectedFileIds.value.isEmpty()) {
             Text(stringResource(R.string.action_delete))
         } else {
-            Text("Delete ${selectedFileIds.value.size} files · $formattedSize")
+            Text(stringResource(R.string.duplicates_delete_files_with_size, selectedFileIds.value.size, formattedSize))
         }
     }
 
@@ -219,7 +218,7 @@ fun DeleteButtonBottomBar(vm: FlatDuplicatesFileManagerVM = viewModel()) {
                 confirmButton = {
                     if (!isDeleting.value) {
                         TextButton(onClick = { vm.confirmDeleteFiles() }) {
-                            Text(stringResource(R.string.action_delete), color = Color.Red)
+                            Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)
                         }
                     }
                 },
@@ -250,8 +249,8 @@ fun FileListView(vm: FlatDuplicatesFileManagerVM = viewModel()) {
     if (duplicateMap.isEmpty()) {
         EmptyStateView(
             icon = Icons.Outlined.SearchOff,
-            title = "No duplicates found",
-            subtitle = "All your files are unique",
+            title = stringResource(R.string.duplicates_no_duplicates_found),
+            subtitle = stringResource(R.string.duplicates_all_unique),
         )
         return
     }
