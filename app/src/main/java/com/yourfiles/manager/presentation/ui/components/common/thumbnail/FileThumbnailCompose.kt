@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import com.yourfiles.manager.utils.isApk
 import com.yourfiles.manager.utils.isImage
 import com.yourfiles.manager.utils.isVideo
 
@@ -21,6 +22,11 @@ fun FileThumbnailCompose(
         ImageThumbnailCompose(model = model)
     } else if (isVideo(filePath)) {
         VideoThumbnailCompose(model = model)
+    } else if (isApk(filePath)) {
+        ApkThumbnailCompose(
+            apkPath = filePath,
+            modifier = modifierWithClip,
+        )
     } else {
         OtherFileThumbnailCompose(
             modifier = modifierWithClip,

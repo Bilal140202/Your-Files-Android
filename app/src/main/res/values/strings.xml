@@ -320,4 +320,16 @@
     <string name="browser_paste">Paste</string>
     <string name="browser_items_count">%d items</string>
     <string name="browser_search_in">Search in %s</string>
+    <string name="browser_sort_by">Sort by</string>
+    <string name="browser_view_mode">View</string>
+    <string name="sort_name_asc">Name (A→Z)</string>
+    <string name="sort_name_desc">Name (Z→A)</string>
+    <string name="sort_size_asc">Size (smallest first)</string>
+    <string name="sort_size_desc">Size (largest first)</string>
+    <string name="sort_date_asc">Date (oldest first)</string>
+    <string name="sort_date_desc">Date (newest first)</string>
+    <string name="sort_type_asc">Type (A→Z)</string>
+    <string name="sort_type_desc">Type (Z→A)</string>
+    <string name="view_list">List view</string>
+    <string name="view_grid">Grid view</string>
 </resources>

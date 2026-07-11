@@ -171,3 +171,7 @@ fun isImage(path: String): Boolean {
     val extension = path.substringAfterLast('.', "").lowercase()
     return extension in listOf("jpg", "jpeg", "png", "gif", "bmp", "webp")
 }
+
+fun isApk(path: String): Boolean {
+    return path.substringAfterLast('.', "").lowercase() == "apk"
+}

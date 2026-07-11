@@ -132,7 +132,15 @@ fun ESDrawerContent(drawerState: DrawerState, currentRoute: String? = null) {
                 } else {
                     lastWasSection = false
                     val selected = when {
-                        item.route != null -> currentRoute == item.route
+                        item.route != null -> {
+                            // Handle parameterised routes like /media-category/{categoryType}
+                            if (item.route.startsWith("${Routes.MEDIA_STORE_CATEGORY}/")) {
+                                currentRoute?.startsWith("${Routes.MEDIA_STORE_CATEGORY}/") == true &&
+                                    currentRoute == item.route
+                            } else {
+                                currentRoute == item.route
+                            }
+                        }
                         item.path != null -> {
                             currentRoute?.startsWith(Routes.EXPLORER) == true &&
                                 currentExplorerPath == item.path

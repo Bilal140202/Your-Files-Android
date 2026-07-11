@@ -22,6 +22,26 @@ import java.util.Locale
 /** Clipboard state for Copy/Cut operations. */
 enum class ClipboardMode { COPY, CUT }
 
+/** Sorting options for file browser (ES File Explorer / MiXplorer style). */
+enum class SortType(val key: String, val label: String) {
+    NAME_ASC("name_asc", "Name (A→Z)"),
+    NAME_DESC("name_desc", "Name (Z→A)"),
+    SIZE_ASC("size_asc", "Size (small first)"),
+    SIZE_DESC("size_desc", "Size (large first)"),
+    DATE_ASC("date_asc", "Date (oldest first)"),
+    DATE_DESC("date_desc", "Date (newest first)"),
+    TYPE_ASC("type_asc", "Type (A→Z)"),
+    TYPE_DESC("type_desc", "Type (Z→A)"),
+    ;
+    companion object {
+        val DEFAULT = NAME_ASC
+        fun fromKey(key: String): SortType = entries.firstOrNull { it.key == key } ?: DEFAULT
+    }
+}
+
+/** View mode for file list (ES File Explorer / MiXplorer style). */
+enum class ViewMode { LIST, GRID }
+
 data class ExplorerState(
     val currentPath: String = "",
     val items: List<FileItem> = emptyList(),
@@ -36,21 +56,37 @@ data class ExplorerState(
     // Clipboard state
     val clipboardPaths: List<String> = emptyList(),
     val clipboardMode: ClipboardMode? = null,
+    // Sort & view state
+    val sortType: SortType = SortType.DEFAULT,
+    val viewMode: ViewMode = ViewMode.LIST,
 ) {
-    /** Derive display list: filtered by searchQuery, folders first always. */
+    /** Derive display list: filtered by searchQuery, sorted by sortType, folders first always. */
     val displayItems: List<FileItem>
         get() {
-            if (searchQuery.isEmpty()) return items
-            return items.filter {
+            var result = if (searchQuery.isEmpty()) items else items.filter {
                 it.name.contains(searchQuery, ignoreCase = true)
-            }.sortedWith(
-                compareByDescending<FileItem> { it.isDirectory }
-                    .thenBy { it.name.lowercase() }
-            )
+            }
+            // Sort: folders always first, then apply sortType
+            val folders = result.filter { it.isDirectory }.sortedWith(sortComparator(sortType))
+            val files = result.filter { !it.isDirectory }.sortedWith(sortComparator(sortType))
+            result = folders + files
+            return result
         }
 
     /** True if clipboard has items to paste. */
     val hasClipboard: Boolean get() = clipboardPaths.isNotEmpty()
+}
+
+/** Build a comparator for the given [SortType]. Only sorts files, not directories (handled separately). */
+private fun sortComparator(sortType: SortType): Comparator<FileItem> = when (sortType) {
+    SortType.NAME_ASC  -> compareBy { it.name.lowercase() }
+    SortType.NAME_DESC -> compareByDescending { it.name.lowercase() }
+    SortType.SIZE_ASC  -> compareBy { it.size }
+    SortType.SIZE_DESC -> compareByDescending { it.size }
+    SortType.DATE_ASC  -> compareBy { it.lastModified }
+    SortType.DATE_DESC -> compareByDescending { it.lastModified }
+    SortType.TYPE_ASC  -> compareBy { it.name.substringAfterLast('.', "").lowercase() }
+    SortType.TYPE_DESC -> compareByDescending { it.name.substringAfterLast('.', "").lowercase() }
 }
 
 class FileExplorerViewModel(
@@ -197,6 +233,15 @@ class FileExplorerViewModel(
 
     fun setSearchQuery(query: String) {
         _state.value = _state.value.copy(searchQuery = query)
+    }
+
+    fun setSortType(sortType: SortType) {
+        _state.value = _state.value.copy(sortType = sortType)
+    }
+
+    fun toggleViewMode() {
+        val current = _state.value.viewMode
+        _state.value = _state.value.copy(viewMode = if (current == ViewMode.LIST) ViewMode.GRID else ViewMode.LIST)
     }
 
     /**

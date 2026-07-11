@@ -22,10 +22,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -55,7 +61,10 @@ import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.Sort
 import androidx.compose.material.icons.outlined.SwapHoriz
+import androidx.compose.material.icons.outlined.ViewList
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
@@ -110,8 +119,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yourfiles.manager.app.LocalNavController
 import com.yourfiles.manager.app.Routes
 import com.yourfiles.manager.domain.model.FileItem
+import com.yourfiles.manager.presentation.ui.components.common.thumbnail.FileThumbnailCompose
 import com.yourfiles.manager.presentation.ui.components.common.EmptyStateView
 import com.yourfiles.manager.presentation.vm.FileExplorerViewModel
+import com.yourfiles.manager.presentation.vm.SortType
+import com.yourfiles.manager.presentation.vm.ViewMode
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.debounce
@@ -154,6 +166,9 @@ fun FileBrowserScreen(
 
     // Overflow menu state
     var showOverflowMenu by remember { mutableStateOf(false) }
+
+    // Sort menu
+    var showSortMenu by remember { mutableStateOf(false) }
 
     val scrollState = rememberLazyListState()
 
@@ -560,6 +575,21 @@ fun FileBrowserScreen(
                                 tint = MaterialTheme.colorScheme.onPrimary,
                             )
                         }
+                        IconButton(onClick = { showSortMenu = true }) {
+                            Icon(
+                                Icons.Outlined.Sort,
+                                contentDescription = stringResource(R.string.browser_sort_by),
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                            )
+                        }
+                        // View toggle button
+                        IconButton(onClick = { viewModel.toggleViewMode() }) {
+                            Icon(
+                                if (state.viewMode == ViewMode.GRID) Icons.Outlined.ViewList else Icons.Outlined.GridView,
+                                contentDescription = stringResource(R.string.browser_view_mode),
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                            )
+                        }
                         Box {
                             IconButton(onClick = { showOverflowMenu = true }) {
                                 Icon(
@@ -578,6 +608,26 @@ fun FileBrowserScreen(
                                         showOverflowMenu = false
                                         navController.navigate("${Routes.FOLDER_ORGANISER}?path=${Uri.encode(state.currentPath)}")
                                     },
+                                )
+                            }
+                        }
+                        // Sort dropdown menu
+                        DropdownMenu(
+                            expanded = showSortMenu,
+                            onDismissRequest = { showSortMenu = false },
+                        ) {
+                            SortType.entries.forEach { sort ->
+                                DropdownMenuItem(
+                                    text = { Text(sort.label) },
+                                    onClick = {
+                                        viewModel.setSortType(sort)
+                                        showSortMenu = false
+                                    },
+                                    trailingIcon = {
+                                        if (state.sortType == sort) {
+                                            Text("✓", color = MaterialTheme.colorScheme.primary)
+                                        }
+                                    }
                                 )
                             }
                         }
@@ -654,69 +704,133 @@ fun FileBrowserScreen(
                 }
             }
         } else {
-            LazyColumn(
-                state = scrollState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-            ) {
-                if (state.isLoading) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.primary,
+            if (state.viewMode == ViewMode.GRID) {
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 100.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    if (state.isLoading) {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                        }
+                    }
+
+                    if (!state.isLoading && displayItems.isEmpty()) {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            EmptyStateView(
+                                icon = if (state.searchQuery.isNotEmpty())
+                                    Icons.Outlined.Search
+                                else
+                                    Icons.Outlined.Folder,
+                                title = if (state.searchQuery.isNotEmpty()) stringResource(R.string.browser_no_matches_found) else stringResource(R.string.browser_folder_empty),
+                                subtitle = if (state.searchQuery.isNotEmpty()) stringResource(R.string.browser_try_different_search) else null,
                             )
                         }
                     }
-                }
 
-                if (!state.isLoading && displayItems.isEmpty()) {
-                    item {
-                        EmptyStateView(
-                            icon = if (state.searchQuery.isNotEmpty())
-                                Icons.Outlined.Search
-                            else
-                                Icons.Outlined.Folder,
-                            title = if (state.searchQuery.isNotEmpty()) stringResource(R.string.browser_no_matches_found) else stringResource(R.string.browser_folder_empty),
-                            subtitle = if (state.searchQuery.isNotEmpty()) stringResource(R.string.browser_try_different_search) else null,
+                    gridItems(displayItems, key = { it.path }) { item ->
+                        FileGridItem(
+                            item = item,
+                            isSelected = state.selectedItems.contains(item.path),
+                            isMultiSelectMode = state.isMultiSelectMode,
+                            onClick = {
+                                if (state.isMultiSelectMode) {
+                                    viewModel.toggleSelection(item.path)
+                                } else if (item.isDirectory) {
+                                    viewModel.navigateTo(item.path)
+                                } else {
+                                    navController.navigate(
+                                        "${Routes.FILE_DETAIL_VIEWER}?url=${android.net.Uri.encode(item.path)}&category=file"
+                                    )
+                                }
+                            },
+                            onLongClick = {
+                                viewModel.toggleSelection(item.path)
+                            },
                         )
                     }
                 }
-
-                items(displayItems, key = { it.path }) { item ->
-                    FileListItem(
-                        item = item,
-                        isSelected = state.selectedItems.contains(item.path),
-                        isMultiSelectMode = state.isMultiSelectMode,
-                        isIntervalMode = state.isIntervalMode,
-                        dateFormatter = { viewModel.formatDate(it) },
-                        onClick = {
-                            if (state.isMultiSelectMode) {
-                                viewModel.toggleSelection(item.path)
-                            } else if (item.isDirectory) {
-                                viewModel.navigateTo(item.path)
-                            } else {
-                                navController.navigate(
-                                    "${Routes.FILE_DETAIL_VIEWER}?url=${android.net.Uri.encode(item.path)}&category=file"
+            } else {
+                LazyColumn(
+                    state = scrollState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                ) {
+                    if (state.isLoading) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary,
                                 )
                             }
-                        },
-                        onLongClick = {
-                            viewModel.toggleSelection(item.path)
-                        },
-                    )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 56.dp),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                    )
+                        }
+                    }
+
+                    if (!state.isLoading && displayItems.isEmpty()) {
+                        item {
+                            EmptyStateView(
+                                icon = if (state.searchQuery.isNotEmpty())
+                                    Icons.Outlined.Search
+                                else
+                                    Icons.Outlined.Folder,
+                                title = if (state.searchQuery.isNotEmpty()) stringResource(R.string.browser_no_matches_found) else stringResource(R.string.browser_folder_empty),
+                                subtitle = if (state.searchQuery.isNotEmpty()) stringResource(R.string.browser_try_different_search) else null,
+                            )
+                        }
+                    }
+
+                    items(displayItems, key = { it.path }) { item ->
+                        FileListItem(
+                            item = item,
+                            isSelected = state.selectedItems.contains(item.path),
+                            isMultiSelectMode = state.isMultiSelectMode,
+                            isIntervalMode = state.isIntervalMode,
+                            dateFormatter = { viewModel.formatDate(it) },
+                            onClick = {
+                                if (state.isMultiSelectMode) {
+                                    viewModel.toggleSelection(item.path)
+                                } else if (item.isDirectory) {
+                                    viewModel.navigateTo(item.path)
+                                } else {
+                                    navController.navigate(
+                                        "${Routes.FILE_DETAIL_VIEWER}?url=${android.net.Uri.encode(item.path)}&category=file"
+                                    )
+                                }
+                            },
+                            onLongClick = {
+                                viewModel.toggleSelection(item.path)
+                            },
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = 56.dp),
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                        )
+                    }
                 }
             }
         }
@@ -851,6 +965,107 @@ private fun BottomSheetAction(
     }
 }
 
+// ===== GRID FILE ITEM (ES / MiXplorer style) =====
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun FileGridItem(
+    item: FileItem,
+    isSelected: Boolean,
+    isMultiSelectMode: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
+    val context = LocalContext.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick,
+            )
+            .background(
+                when {
+                    isSelected -> MaterialTheme.colorScheme.primaryContainer
+                    else -> MaterialTheme.colorScheme.surface
+                }
+            )
+            .padding(4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceDim),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (item.isDirectory) {
+                // Folder icon
+                Icon(
+                    imageVector = Icons.Outlined.Folder,
+                    contentDescription = null,
+                    tint = FolderColor,
+                    modifier = Modifier.size(48.dp),
+                )
+            } else {
+                // File thumbnail
+                FileThumbnailCompose(
+                    model = item.path,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(8.dp)),
+                )
+            }
+
+            // Selection checkbox overlay
+            if (isMultiSelectMode) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(4.dp)
+                ) {
+                    Icon(
+                        if (isSelected) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
+                        contentDescription = null,
+                        tint = if (isSelected) MaterialTheme.colorScheme.primary
+                               else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // File name
+        Text(
+            text = item.name,
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        // Size or item count
+        Text(
+            text = if (item.isDirectory) {
+                stringResource(R.string.browser_items_count, item.childCount)
+            } else {
+                Formatter.formatShortFileSize(context, item.size)
+            },
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            fontSize = 10.sp,
+        )
+    }
+}
+
 // ===== FILE LIST ITEM =====
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -905,12 +1120,29 @@ private fun FileListItem(
             Spacer(modifier = Modifier.width(8.dp))
         }
 
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = iconColor,
-            modifier = Modifier.size(24.dp),
-        )
+        // Thumbnail: image/video/apk get real thumbnails, others get Material icons
+        val filePath = item.path
+        val ext = item.name.substringAfterLast('.', "").lowercase()
+        if (!item.isDirectory && (ext in listOf("jpg", "jpeg", "png", "gif", "webp", "bmp") || ext in listOf("mp4", "mkv", "webm", "avi", "mov", "3gp", "flv") || ext == "apk")) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(6.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                FileThumbnailCompose(
+                    model = filePath,
+                    modifier = Modifier.size(40.dp),
+                )
+            }
+        } else {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconColor,
+                modifier = Modifier.size(24.dp),
+            )
+        }
 
         Spacer(modifier = Modifier.width(12.dp))
 
