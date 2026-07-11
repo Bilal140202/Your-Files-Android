@@ -46,6 +46,8 @@ fun buildAppGraph(
     scope: CoroutineScope,
     navController: NavHostController,
 ): NavGraphBuilder.() -> Unit = {
+    // Shared lambda — every sidebar-accessible screen gets the hamburger menu
+    val openDrawer: () -> Unit = { scope.launch { drawerState.open() } }
     composable(HOME) {
         ESHomeScreen(
             onNavigateToExplorer = { path ->
@@ -81,19 +83,19 @@ fun buildAppGraph(
         ImageOptimiserPage()
     }
     composable(FLAT_DUPLICATES_FILE_MANAGER) {
-        FlatFileManager()
+        FlatFileManager(onOpenDrawer = openDrawer)
     }
     composable(FLAT_VIDEOS_FILE_MANAGER) {
-        FlatVideosFileManager()
+        FlatVideosFileManager(onOpenDrawer = openDrawer)
     }
     composable(FLAT_IMAGES_FILE_MANAGER) {
-        FlatImagesFileManager()
+        FlatImagesFileManager(onOpenDrawer = openDrawer)
     }
     composable(route = FLAT_LARGE_FILE_MANAGER) {
-        FlatLargeFilesManager()
+        FlatLargeFilesManager(onOpenDrawer = openDrawer)
     }
     composable(FLAT_SCREENSHOTS_FILE_MANAGER) {
-        FlatScreenshotsFileManager()
+        FlatScreenshotsFileManager(onOpenDrawer = openDrawer)
     }
     composable(FLAT_WHATSAPP_FILE_MANAGER) {
         WhatsAppCleanerPage()
@@ -118,7 +120,10 @@ fun buildAppGraph(
     ) { backStackEntry ->
         val typeStr = backStackEntry.arguments?.getString("categoryType") ?: "images"
         val categoryType = CategoryType.fromKey(typeStr)
-        MediaStoreCategoryScreen(categoryType = categoryType)
+        MediaStoreCategoryScreen(
+            categoryType = categoryType,
+            onOpenDrawer = openDrawer,
+        )
     }
     composable(SETTINGS) {
         SettingsPage()

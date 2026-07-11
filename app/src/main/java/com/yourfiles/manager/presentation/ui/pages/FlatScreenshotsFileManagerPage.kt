@@ -28,7 +28,10 @@ import com.yourfiles.manager.presentation.ui.components.common.flatFileManager.F
 import com.yourfiles.manager.presentation.vm.FlatScreenshotsFileManagerVM
 
 @Composable
-fun FlatScreenshotsFileManager(vm: FlatScreenshotsFileManagerVM = viewModel()) {
+fun FlatScreenshotsFileManager(
+    onOpenDrawer: () -> Unit = {},
+    vm: FlatScreenshotsFileManagerVM = viewModel(),
+) {
     val navController = LocalNavController.current
     val selectedModeOn = remember { vm.selectedModeOn }
     val filesState by remember { vm.getScreenshotFiles() }.collectAsState(initial = null)
@@ -39,7 +42,7 @@ fun FlatScreenshotsFileManager(vm: FlatScreenshotsFileManagerVM = viewModel()) {
 
     ScreenScaffold(
         title = stringResource(R.string.category_screenshots),
-        onBack = { navController.navigateUp() },
+        onOpenDrawer = onOpenDrawer,
         actions = {
             if (!selectedModeOn.value) {
                 TextButton(onClick = { selectedModeOn.value = true }) {

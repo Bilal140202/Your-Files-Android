@@ -28,7 +28,10 @@ import com.yourfiles.manager.presentation.ui.components.common.flatFileManager.F
 import com.yourfiles.manager.presentation.vm.FlatVideosFileManagerVM
 
 @Composable
-fun FlatVideosFileManager(vm: FlatVideosFileManagerVM = viewModel()) {
+fun FlatVideosFileManager(
+    onOpenDrawer: () -> Unit = {},
+    vm: FlatVideosFileManagerVM = viewModel(),
+) {
     val navController = LocalNavController.current
     val selectedModeOn = remember { vm.selectedModeOn }
     val filesState by remember { vm.getVideoFiles() }.collectAsState(initial = null)
@@ -39,7 +42,7 @@ fun FlatVideosFileManager(vm: FlatVideosFileManagerVM = viewModel()) {
 
     ScreenScaffold(
         title = stringResource(R.string.category_large_videos),
-        onBack = { navController.navigateUp() },
+        onOpenDrawer = onOpenDrawer,
         actions = {
             if (!selectedModeOn.value) {
                 TextButton(onClick = { selectedModeOn.value = true }) {

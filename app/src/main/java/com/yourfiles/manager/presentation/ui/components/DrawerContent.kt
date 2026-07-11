@@ -68,11 +68,10 @@ fun ESDrawerContent(drawerState: DrawerState, currentRoute: String? = null) {
         scope.launch { drawerState.close() }
         if (isRoute) {
             navController.navigate(routeOrPath) {
-                navController.graph.startDestinationRoute?.let { route ->
-                    popUpTo(route) { saveState = true }
-                }
+                // Don't popUpTo home — this prevents the homepage from flashing
+                // during transitions and keeps the sidebar accessible on every screen
+                popUpTo(Routes.HOME) { inclusive = false }
                 launchSingleTop = true
-                restoreState = true
             }
         } else {
             navController.navigate("${Routes.EXPLORER}?path=${android.net.Uri.encode(routeOrPath)}")

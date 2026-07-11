@@ -28,7 +28,10 @@ import com.yourfiles.manager.presentation.ui.components.common.flatFileManager.F
 import com.yourfiles.manager.presentation.vm.FlatLargeFileManagerVM
 
 @Composable
-fun FlatLargeFilesManager(vm: FlatLargeFileManagerVM = viewModel()) {
+fun FlatLargeFilesManager(
+    onOpenDrawer: () -> Unit = {},
+    vm: FlatLargeFileManagerVM = viewModel(),
+) {
     val navController = LocalNavController.current
     val selectedModeOn = remember { vm.selectedModeOn }
     val filesState by remember { vm.getLargeFiles() }.collectAsState(initial = null)
@@ -39,7 +42,7 @@ fun FlatLargeFilesManager(vm: FlatLargeFileManagerVM = viewModel()) {
 
     ScreenScaffold(
         title = stringResource(R.string.category_large_files),
-        onBack = { navController.navigateUp() },
+        onOpenDrawer = onOpenDrawer,
         actions = {
             if (!selectedModeOn.value) {
                 TextButton(onClick = { selectedModeOn.value = true }) {

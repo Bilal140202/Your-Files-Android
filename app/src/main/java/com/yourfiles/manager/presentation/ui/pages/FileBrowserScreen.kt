@@ -199,18 +199,27 @@ fun FileBrowserScreen(
         }
     }
 
-    // Back priority: search > selection > folder nav
-    BackHandler(enabled = isSearchActive) {
-        isSearchActive = false
-        searchTextInput = ""
-        viewModel.setSearchQuery("")
-        keyboardController?.hide()
-    }
-    BackHandler(enabled = state.isMultiSelectMode) {
-        viewModel.exitMultiSelect()
-    }
-    BackHandler(enabled = !viewModel.isAtRoot() && !isSearchActive && !state.isMultiSelectMode) {
-        viewModel.navigateUp()
+    // Single BackHandler that handles ALL back logic internally
+    // This prevents the NavHost from popping to HOME when navigating folders
+    BackHandler(enabled = true) {
+        when {
+            isSearchActive -> {
+                isSearchActive = false
+                searchTextInput = ""
+                viewModel.setSearchQuery("")
+                keyboardController?.hide()
+            }
+            state.isMultiSelectMode -> {
+                viewModel.exitMultiSelect()
+            }
+            !viewModel.isAtRoot() -> {
+                viewModel.navigateUp()
+            }
+            else -> {
+                // At root — let the system handle (pop to home)
+                navController.popBackStack()
+            }
+        }
     }
 
     // ===== DIALOGS =====

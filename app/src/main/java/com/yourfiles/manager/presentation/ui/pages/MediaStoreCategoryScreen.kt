@@ -81,6 +81,7 @@ import java.util.Locale
 @Composable
 fun MediaStoreCategoryScreen(
     categoryType: CategoryType,
+    onOpenDrawer: () -> Unit = {},
     viewModel: MediaStoreCategoryVM = viewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -110,7 +111,7 @@ fun MediaStoreCategoryScreen(
     ScreenScaffold(
         title = categoryType.label,
         subtitle = subtitle,
-        onBack = { navController.popBackStack() },
+        onOpenDrawer = onOpenDrawer,
         actions = {
             // Sort button
             IconButton(onClick = { showSortMenu = true }) {

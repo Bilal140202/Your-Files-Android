@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.SearchOff
@@ -34,6 +35,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -71,7 +73,10 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FlatFileManager(vm: FlatDuplicatesFileManagerVM = viewModel()) {
+fun FlatFileManager(
+    onOpenDrawer: () -> Unit = {},
+    vm: FlatDuplicatesFileManagerVM = viewModel(),
+) {
     val list by vm.duplicateFiles.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -107,7 +112,11 @@ fun FlatFileManager(vm: FlatDuplicatesFileManagerVM = viewModel()) {
         topBar = {
             TopAppBar(
                 title = { Text(text = stringResource(R.string.category_duplicate_media)) },
-                navigationIcon = { BackNavigationIconCompose() },
+                navigationIcon = {
+                    IconButton(onClick = onOpenDrawer) {
+                        Icon(Icons.Filled.Menu, contentDescription = "Menu")
+                    }
+                },
                 actions = {
                     if (!list.isNullOrEmpty()) {
                         TextButton(
