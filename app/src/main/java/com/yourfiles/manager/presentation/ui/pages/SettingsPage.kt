@@ -1,6 +1,9 @@
 package com.yourfiles.manager.presentation.ui.pages
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -171,7 +174,14 @@ fun SettingsPage() {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 4.dp),
+                    .padding(vertical = 4.dp)
+                    .clickable {
+                        val intent = Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse("https://yourfiles-privacy-policy.netlify.app")
+                        )
+                        context.startActivity(intent)
+                    },
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                 ),
