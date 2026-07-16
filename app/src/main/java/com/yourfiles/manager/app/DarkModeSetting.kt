@@ -6,10 +6,10 @@ import androidx.compose.runtime.mutableStateOf
 /**
  * Centralised dark mode preference holder.
  *
- * Uses a Compose [mutableStateOf] so that any Composable reading [currentSetting]
+ * Uses a Compose [mutableStateOf] so that any Composable reading [isDarkMode]
  * will automatically recompose when the value changes.
  *
- * Values: `"system"` (follow device setting), `"dark"`, `"light"`.
+ * Simple Day/Night toggle — no "system" option.
  */
 object DarkModeSetting {
 
@@ -17,29 +17,22 @@ object DarkModeSetting {
     private const val KEY_DARK_MODE = "dark_mode"
 
     /** Current preference value. Read this inside a Composable to trigger recomposition. */
-    val currentSetting = mutableStateOf("system")
+    val isDarkMode = mutableStateOf(false)
 
     /** Load the persisted value from SharedPreferences. Call once at app start. */
     fun load(context: Context) {
-        currentSetting.value = context
+        isDarkMode.value = context
             .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getString(KEY_DARK_MODE, "system") ?: "system"
+            .getBoolean(KEY_DARK_MODE, false)
     }
 
-    /**
-     * Cycle through the three states: system → dark → light → system.
-     * Persists the new value to SharedPreferences and updates [currentSetting].
-     */
-    fun cycle(context: Context) {
-        val next = when (currentSetting.value) {
-            "system" -> "dark"
-            "dark"   -> "light"
-            else     -> "system"
-        }
-        currentSetting.value = next
+    /** Toggle between light and dark. Persists immediately. */
+    fun toggle(context: Context) {
+        val next = !isDarkMode.value
+        isDarkMode.value = next
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
-            .putString(KEY_DARK_MODE, next)
+            .putBoolean(KEY_DARK_MODE, next)
             .apply()
     }
 }

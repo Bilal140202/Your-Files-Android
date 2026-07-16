@@ -2,12 +2,9 @@ package com.yourfiles.manager.app
 
 import android.app.Application
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.rememberDrawerState
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -16,7 +13,6 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import androidx.room.Room
@@ -27,20 +23,17 @@ import coil3.video.VideoFrameDecoder
 import com.yourfiles.manager.data.db.AppDatabase
 import com.yourfiles.manager.utils.SavedMemoryTracker
 import com.yourfiles.manager.utils.TrashManager
-import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.foundation.isSystemInDarkTheme
 
 
 class App : Application() {
 
     lateinit var imageLoader: ImageLoader
-
     lateinit var db: AppDatabase
 
     override fun onCreate() {
@@ -50,6 +43,7 @@ class App : Application() {
         initLibraries()
         SavedMemoryTracker.initialize()
         DarkModeSetting.load(applicationContext)
+        AppThemeManager.load(applicationContext)
         CoroutineScope(Dispatchers.IO).launch {
             TrashManager.cleanupOldTrash(applicationContext)
         }
@@ -58,8 +52,7 @@ class App : Application() {
     private fun initDB() {
         db = Room.databaseBuilder(
             instance.applicationContext, AppDatabase::class.java, "yourfiles-database"
-        ).fallbackToDestructiveMigration(true)
-            .build()
+        ).fallbackToDestructiveMigration(true).build()
     }
 
     private fun initLibraries() {
@@ -84,20 +77,16 @@ fun YourFilesApp(
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-
     val navController = rememberNavController()
 
-    // ── Dark mode ─────────────────────────────────────────────────────────────
-    val systemDark = isSystemInDarkTheme()
-    val darkModeValue by remember { DarkModeSetting.currentSetting }
-    val darkTheme = when (darkModeValue) {
-        "dark"  -> true
-        "light" -> false
-        else    -> systemDark
-    }
+    // ── Dark mode ─────────────────────────────────────────────────────────
+    val isDark by remember { DarkModeSetting.isDarkMode }
 
     CompositionLocalProvider(LocalNavController provides navController) {
-        com.yourfiles.manager.app.uim3.theme.AppTheme(darkTheme = darkTheme) {
+        com.yourfiles.manager.app.uim3.theme.AppTheme(
+            darkTheme = isDark,
+            themeColors = AppThemeManager.currentThemeColors.value,
+        ) {
             ModalNavigationDrawer(
                 drawerState = drawerState,
                 drawerContent = {

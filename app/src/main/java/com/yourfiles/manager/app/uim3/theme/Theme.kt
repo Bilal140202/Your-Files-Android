@@ -1,94 +1,12 @@
 package com.yourfiles.manager.app.uim3.theme
 
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Shapes
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.yourfiles.manager.app.uim3.theme.AppTypography
-
-private val lightScheme = lightColorScheme(
-    primary = primaryLight,
-    onPrimary = onPrimaryLight,
-    primaryContainer = primaryContainerLight,
-    onPrimaryContainer = onPrimaryContainerLight,
-    secondary = secondaryLight,
-    onSecondary = onSecondaryLight,
-    secondaryContainer = secondaryContainerLight,
-    onSecondaryContainer = onSecondaryContainerLight,
-    tertiary = tertiaryLight,
-    onTertiary = onTertiaryLight,
-    tertiaryContainer = tertiaryContainerLight,
-    onTertiaryContainer = onTertiaryContainerLight,
-    error = errorLight,
-    onError = onErrorLight,
-    errorContainer = errorContainerLight,
-    onErrorContainer = onErrorContainerLight,
-    background = backgroundLight,
-    onBackground = onBackgroundLight,
-    surface = surfaceLight,
-    onSurface = onSurfaceLight,
-    surfaceVariant = surfaceVariantLight,
-    onSurfaceVariant = onSurfaceVariantLight,
-    outline = outlineLight,
-    outlineVariant = outlineVariantLight,
-    scrim = scrimLight,
-    inverseSurface = inverseSurfaceLight,
-    inverseOnSurface = inverseOnSurfaceLight,
-    inversePrimary = inversePrimaryLight,
-    surfaceDim = surfaceDimLight,
-    surfaceBright = surfaceBrightLight,
-    surfaceContainerLowest = surfaceContainerLowestLight,
-    surfaceContainerLow = surfaceContainerLowLight,
-    surfaceContainer = surfaceContainerLight,
-    surfaceContainerHigh = surfaceContainerHighLight,
-    surfaceContainerHighest = surfaceContainerHighestLight,
-)
-
-private val darkScheme = darkColorScheme(
-    primary = primaryDark,
-    onPrimary = onPrimaryDark,
-    primaryContainer = primaryContainerDark,
-    onPrimaryContainer = onPrimaryContainerDark,
-    secondary = secondaryDark,
-    onSecondary = onSecondaryDark,
-    secondaryContainer = secondaryContainerDark,
-    onSecondaryContainer = onSecondaryContainerDark,
-    tertiary = tertiaryDark,
-    onTertiary = onTertiaryDark,
-    tertiaryContainer = tertiaryContainerDark,
-    onTertiaryContainer = onTertiaryContainerDark,
-    error = errorDark,
-    onError = onErrorDark,
-    errorContainer = errorContainerDark,
-    onErrorContainer = onErrorContainerDark,
-    background = AppColors.DarkNavy,
-    onBackground = onBackgroundDark,
-    surface = AppColors.DarkSurface,
-    onSurface = onSurfaceDark,
-    surfaceVariant = surfaceVariantDark,
-    onSurfaceVariant = onSurfaceVariantDark,
-    outline = outlineDark,
-    outlineVariant = outlineVariantDark,
-    scrim = scrimDark,
-    inverseSurface = inverseSurfaceDark,
-    inverseOnSurface = inverseOnSurfaceDark,
-    inversePrimary = inversePrimaryDark,
-    surfaceDim = surfaceDimDark,
-    surfaceBright = surfaceBrightDark,
-    surfaceContainerLowest = surfaceContainerLowestDark,
-    surfaceContainerLow = surfaceContainerLowDark,
-    surfaceContainer = surfaceContainerDark,
-    surfaceContainerHigh = surfaceContainerHighDark,
-    surfaceContainerHighest = surfaceContainerHighestDark,
-)
 
 private val AppShapes = Shapes(
     extraSmall = RoundedCornerShape(4.dp),
@@ -98,25 +16,63 @@ private val AppShapes = Shapes(
     extraLarge = RoundedCornerShape(24.dp),
 )
 
+private fun buildLightScheme(tc: ThemeColors) = lightColorScheme(
+    primary = tc.primaryLight, onPrimary = tc.onPrimaryLight,
+    primaryContainer = tc.primaryContainerLight, onPrimaryContainer = tc.onPrimaryContainerLight,
+    secondary = tc.secondaryLight, onSecondary = tc.onSecondaryLight,
+    secondaryContainer = tc.secondaryContainerLight, onSecondaryContainer = tc.onSecondaryContainerLight,
+    tertiary = tc.tertiaryLight, onTertiary = tc.onTertiaryLight,
+    tertiaryContainer = tc.tertiaryContainerLight, onTertiaryContainer = tc.onTertiaryContainerLight,
+    error = errorLight, onError = onErrorLight,
+    errorContainer = errorContainerLight, onErrorContainer = onErrorContainerLight,
+    background = backgroundLight, onBackground = onBackgroundLight,
+    surface = surfaceLight, onSurface = onSurfaceLight,
+    surfaceVariant = surfaceVariantLight, onSurfaceVariant = onSurfaceVariantLight,
+    outline = outlineLight, outlineVariant = outlineVariantLight,
+    scrim = scrimLight,
+    inverseSurface = inverseSurfaceLight, inverseOnSurface = inverseOnSurfaceLight,
+    inversePrimary = tc.primaryContainerLight,
+    surfaceDim = surfaceDimLight, surfaceBright = surfaceBrightLight,
+    surfaceContainerLowest = surfaceContainerLowestLight, surfaceContainerLow = surfaceContainerLowLight,
+    surfaceContainer = surfaceContainerLight, surfaceContainerHigh = surfaceContainerHighLight,
+    surfaceContainerHighest = surfaceContainerHighestLight,
+)
+
+private fun buildDarkScheme(tc: ThemeColors) = darkColorScheme(
+    primary = tc.primaryDark, onPrimary = tc.onPrimaryDark,
+    primaryContainer = tc.primaryContainerDark, onPrimaryContainer = tc.onPrimaryContainerDark,
+    secondary = tc.secondaryDark, onSecondary = tc.onSecondaryDark,
+    secondaryContainer = tc.secondaryContainerDark, onSecondaryContainer = tc.onSecondaryContainerDark,
+    tertiary = tc.tertiaryDark, onTertiary = tc.onTertiaryDark,
+    tertiaryContainer = tc.tertiaryContainerDark, onTertiaryContainer = tc.onTertiaryContainerDark,
+    error = errorDark, onError = onErrorDark,
+    errorContainer = errorContainerDark, onErrorContainer = onErrorContainerDark,
+    background = AppColors.DarkNavy, onBackground = onBackgroundDark,
+    surface = AppColors.DarkSurface, onSurface = onSurfaceDark,
+    surfaceVariant = surfaceVariantDark, onSurfaceVariant = onSurfaceVariantDark,
+    outline = outlineDark, outlineVariant = outlineVariantDark,
+    scrim = scrimDark,
+    inverseSurface = inverseSurfaceDark, inverseOnSurface = inverseOnSurfaceDark,
+    inversePrimary = tc.primaryDark,
+    surfaceDim = surfaceDimDark, surfaceBright = surfaceBrightDark,
+    surfaceContainerLowest = surfaceContainerLowestDark, surfaceContainerLow = surfaceContainerLowDark,
+    surfaceContainer = surfaceContainerDark, surfaceContainerHigh = surfaceContainerHighDark,
+    surfaceContainerHighest = surfaceContainerHighestDark,
+)
+
 @Composable
 fun AppTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
-    content: @Composable() () -> Unit
+    darkTheme: Boolean = false,
+    themeColors: ThemeColors? = null,
+    content: @Composable () -> Unit,
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> darkScheme
-        else -> lightScheme
-    }
+    val tc = themeColors ?: com.yourfiles.manager.app.AppThemeManager.themes[0].colors
+    val colorScheme = if (darkTheme) buildDarkScheme(tc) else buildLightScheme(tc)
 
     MaterialTheme(
         colorScheme = colorScheme,
         typography = AppTypography,
         shapes = AppShapes,
-        content = content
+        content = content,
     )
 }
