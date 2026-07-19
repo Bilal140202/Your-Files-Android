@@ -5,13 +5,14 @@ import android.os.StatFs
 import android.os.storage.StorageManager
 import android.text.format.Formatter
 import android.util.Log
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -26,11 +28,15 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.Analytics
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.PhotoSizeSelectLarge
 import androidx.compose.material.icons.outlined.SdStorage
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -42,25 +48,31 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import androidx.core.content.getSystemService
 import com.yourfiles.manager.R
+import com.yourfiles.manager.app.AppThemeManager
 import com.yourfiles.manager.app.Routes
-import com.yourfiles.manager.presentation.vm.CategoryType
-import com.yourfiles.manager.app.uim3.theme.AppColors
 import com.yourfiles.manager.app.uim3.theme.CATEGORY_COLORS
 import com.yourfiles.manager.app.uim3.theme.CATEGORY_ICONS
-import com.yourfiles.manager.app.uim3.theme.Spacing
+import com.yourfiles.manager.presentation.vm.CategoryType
 import com.yourfiles.manager.presentation.vm.StorageCategory
-import java.io.File
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Data classes
+// ═══════════════════════════════════════════════════════════════════════════
 
 /** Storage volume info for home screen cards. */
 private data class VolumeInfo(
@@ -85,6 +97,10 @@ private data class ToolItem(
     val route: String,
 )
 
+// ═══════════════════════════════════════════════════════════════════════════
+// Storage detection
+// ═══════════════════════════════════════════════════════════════════════════
+
 /**
  * Detect all mounted storage volumes using StorageManager API.
  * Returns a list of [VolumeInfo] — primary first, then removable.
@@ -101,8 +117,6 @@ private fun getVolumeInfos(context: android.content.Context): List<VolumeInfo> {
 
         val dir = volume.directory
         if (dir == null) {
-            // Android 11+ without MANAGE_EXTERNAL_STORAGE: directory may be null for SD.
-            // Try to guess path from volume description or UUID.
             Log.w("ESHome", "Volume '${volume.getDescription(context)}' has null directory, skipping")
             continue
         }
@@ -132,6 +146,10 @@ private fun getVolumeInfos(context: android.content.Context): List<VolumeInfo> {
     return volumes
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// Main Home Screen — ES Explorer style
+// ═══════════════════════════════════════════════════════════════════════════
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ESHomeScreen(
@@ -141,6 +159,8 @@ fun ESHomeScreen(
 ) {
     val context = LocalContext.current
     val primaryPath = Environment.getExternalStorageDirectory().absolutePath
+    val themeColors = AppThemeManager.currentThemeColors.value
+    val useColoredHeader = themeColors.coloredHeader
 
     val categories = listOf(
         CategoryItem(stringResource(R.string.category_images), CATEGORY_ICONS[StorageCategory.IMAGES]!!, CATEGORY_COLORS[StorageCategory.IMAGES]!!, CategoryType.IMAGES),
@@ -150,6 +170,7 @@ fun ESHomeScreen(
         CategoryItem(stringResource(R.string.category_apks), CATEGORY_ICONS[StorageCategory.APK]!!, CATEGORY_COLORS[StorageCategory.APK]!!, CategoryType.APK),
     )
 
+    // ES Explorer-style tools (only real, functional tools)
     val tools = listOf(
         ToolItem(stringResource(R.string.home_tool_cleaner), Icons.Outlined.CleaningServices, Routes.FLAT_DUPLICATES_FILE_MANAGER),
         ToolItem(stringResource(R.string.home_tool_analyzer), Icons.Outlined.Analytics, Routes.ANALYZER),
@@ -159,49 +180,85 @@ fun ESHomeScreen(
 
     // Detect all storage volumes
     val volumes = remember { getVolumeInfos(context) }
-    val hasSdCard = volumes.count { it.isRemovable } > 0
+    val internalVol = volumes.firstOrNull { !it.isRemovable }
+    val sdVol = volumes.firstOrNull { it.isRemovable }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = stringResource(R.string.app_name),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                },
-                navigationIcon = {
+                    // ES Explorer style: embedded search bar in header
                     Surface(
-                        modifier = Modifier.padding(start = 8.dp),
-                        color = Color.Transparent,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(36.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        color = if (useColoredHeader)
+                            Color.White.copy(alpha = 0.2f)
+                        else
+                            MaterialTheme.colorScheme.surfaceVariant,
                     ) {
-                        androidx.compose.material3.IconButton(onClick = onOpenDrawer) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clickable { onNavigateToExplorer(primaryPath) },
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Start,
+                        ) {
+                            Spacer(modifier = Modifier.width(12.dp))
                             Icon(
-                                imageVector = Icons.Filled.Menu,
-                                contentDescription = stringResource(R.string.cd_menu),
+                                imageVector = Icons.Outlined.Home,
+                                contentDescription = null,
+                                tint = if (useColoredHeader)
+                                    Color.White.copy(alpha = 0.9f)
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(R.string.drawer_home),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (useColoredHeader)
+                                    Color.White.copy(alpha = 0.9f)
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 14.sp,
                             )
                         }
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = onOpenDrawer) {
+                        Icon(
+                            imageVector = Icons.Filled.Menu,
+                            contentDescription = stringResource(R.string.cd_menu),
+                        )
                     }
                 },
                 actions = {
-                    Surface(color = Color.Transparent) {
-                        androidx.compose.material3.IconButton(onClick = {
-                            onNavigateToExplorer(primaryPath)
-                        }) {
-                            Icon(
-                                imageVector = Icons.Outlined.Search,
-                                contentDescription = stringResource(R.string.cd_search),
-                            )
-                        }
+                    IconButton(onClick = { onNavigateToExplorer(primaryPath) }) {
+                        Icon(
+                            imageVector = Icons.Outlined.Search,
+                            contentDescription = stringResource(R.string.cd_search),
+                        )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                ),
+                colors = if (useColoredHeader) {
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        titleContentColor = Color.White,
+                        navigationIconContentColor = Color.White,
+                        actionIconContentColor = Color.White,
+                    )
+                } else {
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    )
+                },
             )
         }
     ) { paddingValues ->
@@ -212,7 +269,7 @@ fun ESHomeScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             // ═══════════════════════════════════════════════════════════════
-            // §1 — STORAGE CARDS (side-by-side: Internal + SD, or full-width Internal)
+            // §1 — STORAGE CARDS with circular progress (ES Explorer style)
             // ═══════════════════════════════════════════════════════════════
             Row(
                 modifier = Modifier
@@ -220,24 +277,22 @@ fun ESHomeScreen(
                     .padding(horizontal = 12.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                // Internal Storage card
-                val internalVol = volumes.firstOrNull { !it.isRemovable }
                 if (internalVol != null) {
-                    StorageCard(
+                    StorageCardCircular(
                         volume = internalVol,
                         modifier = Modifier.weight(1f),
-                        color = MaterialTheme.colorScheme.primary,
+                        progressColor = if (internalVol.usedPercent > 85)
+                            MaterialTheme.colorScheme.error
+                        else
+                            MaterialTheme.colorScheme.primary,
                         onClick = { onNavigateToExplorer(internalVol.path) },
                     )
                 }
-
-                // SD Card (only if mounted)
-                val sdVol = volumes.firstOrNull { it.isRemovable }
                 if (sdVol != null) {
-                    StorageCard(
+                    StorageCardCircular(
                         volume = sdVol,
                         modifier = Modifier.weight(1f),
-                        color = AppColors.CategoryApk,
+                        progressColor = MaterialTheme.colorScheme.secondary,
                         onClick = { onNavigateToExplorer(sdVol.path) },
                     )
                 }
@@ -246,81 +301,59 @@ fun ESHomeScreen(
             Spacer(modifier = Modifier.height(4.dp))
 
             // ═══════════════════════════════════════════════════════════════
-            // §2 — CATEGORIES (compact row, 32dp icons)
+            // §2 — CATEGORIES (ES Explorer: colored icon buttons in a row)
             // ═══════════════════════════════════════════════════════════════
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-            ) {
-                categories.forEach { cat ->
-                    Column(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable {
-                                onNavigateToRoute("${Routes.MEDIA_STORE_CATEGORY}/${cat.categoryType.key}")
-                            },
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                    ) {
-                        Icon(
-                            imageVector = cat.icon,
-                            contentDescription = cat.label,
-                            tint = cat.color,
-                            modifier = Modifier.size(Spacing.iconMedium),
-                        )
-                        Spacer(modifier = Modifier.height(Spacing.xs))
-                        Text(
-                            text = cat.label,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // ═══════════════════════════════════════════════════════════════
-            // §3 — TOOLS GRID (4 cols, 8dp spacing, compact)
-            // ═══════════════════════════════════════════════════════════════
-            Row(
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                ),
+                elevation = CardDefaults.cardElevation(
+                    defaultElevation = themeColors.cardElevation.dp
+                ),
             ) {
-                tools.forEach { tool ->
-                    Surface(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { onNavigateToRoute(tool.route) },
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surface,
-                    ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                ) {
+                    categories.forEach { cat ->
                         Column(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 4.dp, vertical = 8.dp),
+                                .width(56.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable {
+                                    onNavigateToRoute("${Routes.MEDIA_STORE_CATEGORY}/${cat.categoryType.key}")
+                                },
                             horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
                         ) {
-                            Icon(
-                                imageVector = tool.icon,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(Spacing.iconMedium),
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
+                            // Colored circle background for icon
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(
+                                        color = cat.color.copy(alpha = 0.15f),
+                                        shape = CircleShape,
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = cat.icon,
+                                    contentDescription = cat.label,
+                                    tint = cat.color,
+                                    modifier = Modifier.size(22.dp),
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = tool.label,
+                                text = cat.label,
                                 style = MaterialTheme.typography.labelSmall,
                                 fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -330,100 +363,178 @@ fun ESHomeScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // ═══════════════════════════════════════════════════════════════
+            // §3 — TOOLS GRID (ES Explorer: 2 rows × 5 cols, white cards)
+            // ═══════════════════════════════════════════════════════════════
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                ),
+                elevation = CardDefaults.cardElevation(
+                    defaultElevation = themeColors.cardElevation.dp
+                ),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                ) {
+                    tools.forEach { tool ->
+                        ToolIcon(
+                            label = tool.label,
+                            icon = tool.icon,
+                            onClick = { onNavigateToRoute(tool.route) },
+                            tintColor = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
 
-// ════════════════════════════════════════════════════════════════════════
-// Storage Card composable — used for both Internal and SD
-// ════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+// Storage Card with CIRCULAR progress (ES Explorer style)
+// ═══════════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun StorageCard(
+private fun StorageCardCircular(
     volume: VolumeInfo,
     modifier: Modifier = Modifier,
-    color: Color,
+    progressColor: Color,
     onClick: () -> Unit,
 ) {
     val context = LocalContext.current
     val usedBytes = volume.totalBytes - volume.freeBytes
 
-    Surface(
+    Card(
         modifier = modifier
-            .fillMaxHeight()
+            .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surface,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = AppThemeManager.currentThemeColors.value.cardElevation.dp
+        ),
     ) {
-        Column(modifier = Modifier.padding(10.dp)) {
-            // Title row
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Outlined.SdStorage,
-                    contentDescription = null,
-                    tint = color,
-                    modifier = Modifier.size(16.dp),
-                )
-                Spacer(modifier = Modifier.width(6.dp))
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            // Circular progress indicator
+            Box(
+                modifier = Modifier.size(64.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Canvas(
+                    modifier = Modifier.size(64.dp),
+                ) {
+                    val strokeWidth = 6.dp.toPx()
+                    val diameter = size.minDimension - strokeWidth
+                    val topLeft = Offset(strokeWidth / 2, strokeWidth / 2)
+
+                    // Background circle
+                    drawCircle(
+                        color = progressColor.copy(alpha = 0.15f),
+                        radius = diameter / 2,
+                        center = topLeft + Offset(diameter / 2, diameter / 2),
+                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+                    )
+                    // Progress arc
+                    val sweep = (volume.usedPercent / 100f) * 360f
+                    drawArc(
+                        color = progressColor,
+                        startAngle = -90f,
+                        sweepAngle = sweep,
+                        useCenter = false,
+                        topLeft = topLeft,
+                        size = Size(diameter, diameter),
+                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+                    )
+                }
+                // Percentage text in center
                 Text(
-                    text = volume.name,
-                    style = MaterialTheme.typography.labelMedium,
+                    text = "${volume.usedPercent}%",
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            // Progress bar
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(6.dp),
-                shape = RoundedCornerShape(3.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-            ) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth(volume.usedPercent / 100f)
-                        .height(6.dp),
-                    shape = RoundedCornerShape(3.dp),
-                    color = color,
-                ) {}
-            }
-
-            Spacer(modifier = Modifier.height(3.dp))
-
-            // Used / Free
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = Formatter.formatShortFileSize(context, usedBytes),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 10.sp,
-                    maxLines = 1,
-                )
-                Text(
-                    text = "${volume.usedPercent}%",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = color,
-                    fontSize = 10.sp,
-                )
-            }
-
-            Spacer(modifier = Modifier.height(1.dp))
+            // Storage name
             Text(
-                text = stringResource(R.string.home_free_of, Formatter.formatShortFileSize(context, volume.freeBytes), Formatter.formatShortFileSize(context, volume.totalBytes)),
+                text = volume.name,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            // Used / Total
+            Text(
+                text = stringResource(
+                    R.string.home_free_of,
+                    Formatter.formatShortFileSize(context, usedBytes),
+                    Formatter.formatShortFileSize(context, volume.totalBytes)
+                ),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 9.sp,
+                fontSize = 10.sp,
                 maxLines = 1,
             )
         }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Tool Icon (ES Explorer: icon + label, compact)
+// ═══════════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun ToolIcon(
+    label: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    tintColor: Color,
+) {
+    Column(
+        modifier = Modifier
+            .width(56.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = tintColor,
+            modifier = Modifier.size(24.dp),
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontSize = 10.sp,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }

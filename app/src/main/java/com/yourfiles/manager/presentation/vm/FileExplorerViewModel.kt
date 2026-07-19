@@ -253,9 +253,12 @@ class FileExplorerViewModel(
         val current = _state.value.currentPath
         if (current.isEmpty()) return true
         if (current == rootPath) return true
-        // Check if parent is one of the known storage roots
+        // Check if parent is /storage or / — means we're at a storage mount point root (e.g. SD card)
+        // Do NOT check parent == rootPath here — that incorrectly returns true for any
+        // direct child of internal storage (e.g. /storage/emulated/0/DCIM), causing
+        // back press to pop to home instead of navigating up.
         val parent = File(current).parentFile?.absolutePath ?: return true
-        return parent == rootPath || parent == "/storage" || parent == "/"
+        return parent == "/storage" || parent == "/"
     }
 
     fun navigateUp(): Boolean {

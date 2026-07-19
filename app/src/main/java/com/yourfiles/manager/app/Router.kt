@@ -51,7 +51,10 @@ fun buildAppGraph(
     composable(HOME) {
         ESHomeScreen(
             onNavigateToExplorer = { path ->
-                navController.navigate("${EXPLORER}?path=${Uri.encode(path)}")
+                navController.navigate("${EXPLORER}?path=${Uri.encode(path)}") {
+                    popUpTo(HOME) { inclusive = false }
+                    launchSingleTop = true
+                }
             },
             onNavigateToRoute = { route ->
                 navController.navigate(route)
@@ -106,7 +109,10 @@ fun buildAppGraph(
     composable(Routes.ANALYZER) {
         StorageAnalyzerScreen(
             onNavigateToExplorer = { path ->
-                navController.navigate("${EXPLORER}?path=${Uri.encode(path)}")
+                navController.navigate("${EXPLORER}?path=${Uri.encode(path)}") {
+                    popUpTo(HOME) { inclusive = false }
+                    launchSingleTop = true
+                }
             }
         )
     }

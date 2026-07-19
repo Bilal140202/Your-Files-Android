@@ -105,6 +105,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.yourfiles.manager.app.uim3.theme.FolderColor
+import com.yourfiles.manager.app.AppThemeManager
+import com.yourfiles.manager.app.uim3.theme.ItemLayoutStyle
 import com.yourfiles.manager.app.uim3.theme.categoryColorForExtension
 import androidx.compose.ui.res.stringResource
 import com.yourfiles.manager.R
@@ -199,10 +201,20 @@ fun FileBrowserScreen(
         }
     }
 
-    // Single BackHandler that handles ALL back logic internally
-    // This prevents the NavHost from popping to HOME when navigating folders
+    // Single BackHandler that handles ALL back logic internally.
+    // Priority: close sheets/search > exit selection > folder up > pop NavHost
     BackHandler(enabled = true) {
         when {
+            showMoreSheet -> { showMoreSheet = false }
+            showInfoSheet -> { showInfoSheet = false }
+            showSortMenu -> { showSortMenu = false }
+            showOverflowMenu -> { showOverflowMenu = false }
+            showDeleteDialog || showRenameDialog || showCreateFolderDialog -> {
+                showDeleteDialog = false
+                showRenameDialog = false
+                showCreateFolderDialog = false
+                newFolderName = ""
+            }
             isSearchActive -> {
                 isSearchActive = false
                 searchTextInput = ""
@@ -216,7 +228,7 @@ fun FileBrowserScreen(
                 viewModel.navigateUp()
             }
             else -> {
-                // At root — let the system handle (pop to home)
+                // At storage root — pop back to home
                 navController.popBackStack()
             }
         }
@@ -834,11 +846,13 @@ fun FileBrowserScreen(
                                 viewModel.toggleSelection(item.path)
                             },
                         )
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 56.dp),
-                            thickness = 0.5.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant,
-                        )
+                        if (AppThemeManager.currentThemeColors.value.showDividers) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(start = 56.dp),
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant,
+                            )
+                        }
                     }
                 }
             }
@@ -1007,7 +1021,7 @@ private fun FileGridItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(AppThemeManager.currentThemeColors.value.itemCornerRadius.dp))
                 .background(MaterialTheme.colorScheme.surfaceDim),
             contentAlignment = Alignment.Center,
         ) {
@@ -1016,8 +1030,8 @@ private fun FileGridItem(
                 Icon(
                     imageVector = Icons.Outlined.Folder,
                     contentDescription = null,
-                    tint = FolderColor,
-                    modifier = Modifier.size(48.dp),
+                    tint = AppThemeManager.currentThemeColors.value.folderIconColor ?: FolderColor,
+                    modifier = Modifier.size(AppThemeManager.currentThemeColors.value.folderGridIconSize.dp),
                 )
             } else {
                 // File thumbnail
@@ -1025,7 +1039,7 @@ private fun FileGridItem(
                     model = item.path,
                     modifier = Modifier
                         .fillMaxSize()
-                        .clip(RoundedCornerShape(8.dp)),
+                        .clip(RoundedCornerShape(AppThemeManager.currentThemeColors.value.itemCornerRadius.dp)),
                 )
             }
 
@@ -1091,23 +1105,42 @@ private fun FileListItem(
     val context = LocalContext.current
     val icon = getFileIcon(item)
     val iconColor = getFileIconColor(item)
+    val tc = AppThemeManager.currentThemeColors.value
+    val folderColor = tc.folderIconColor ?: FolderColor
+
+    val itemBg = when {
+        isSelected -> MaterialTheme.colorScheme.primaryContainer
+        isIntervalMode -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f)
+        tc.highlightItems -> MaterialTheme.colorScheme.surfaceContainerLow
+        else -> Color.Transparent
+    }
+
+    val itemModifier = Modifier
+        .fillMaxWidth()
+        .height(tc.listItemHeight.dp)
+        .combinedClickable(
+            onClick = onClick,
+            onLongClick = onLongClick,
+        )
+        .then(
+            if (tc.itemLayoutStyle == ItemLayoutStyle.CARD) {
+                Modifier
+                    .padding(horizontal = tc.listHorizontalPadding.dp, vertical = 2.dp)
+                    .clip(RoundedCornerShape(tc.itemCornerRadius.dp))
+                    .background(
+                        if (itemBg == Color.Transparent) MaterialTheme.colorScheme.surface
+                        else itemBg,
+                        RoundedCornerShape(tc.itemCornerRadius.dp),
+                    )
+            } else {
+                Modifier
+                    .background(itemBg)
+                    .padding(horizontal = if (tc.itemLayoutStyle == ItemLayoutStyle.COMPACT) 6.dp else 8.dp, vertical = 2.dp)
+            }
+        )
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick,
-            )
-            .background(
-                when {
-                    isSelected -> MaterialTheme.colorScheme.primaryContainer
-                    isIntervalMode -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f)
-                    else -> MaterialTheme.colorScheme.surface
-                }
-            )
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+        modifier = itemModifier,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (isMultiSelectMode) {
@@ -1135,21 +1168,21 @@ private fun FileListItem(
         if (!item.isDirectory && (ext in listOf("jpg", "jpeg", "png", "gif", "webp", "bmp") || ext in listOf("mp4", "mkv", "webm", "avi", "mov", "3gp", "flv") || ext == "apk")) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(6.dp)),
+                    .size(tc.thumbnailSize.dp)
+                    .clip(RoundedCornerShape((tc.itemCornerRadius * 0.6f).toInt().dp.coerceAtLeast(2.dp))),
                 contentAlignment = Alignment.Center,
             ) {
                 FileThumbnailCompose(
                     model = filePath,
-                    modifier = Modifier.size(40.dp),
+                    modifier = Modifier.size(tc.thumbnailSize.dp),
                 )
             }
         } else {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = iconColor,
-                modifier = Modifier.size(24.dp),
+                tint = if (item.isDirectory) folderColor else iconColor,
+                modifier = Modifier.size(tc.fileIconSize.dp),
             )
         }
 
@@ -1164,22 +1197,25 @@ private fun FileListItem(
             color = MaterialTheme.colorScheme.onSurface,
         )
 
+        val tcMeta = AppThemeManager.currentThemeColors.value
         Column(
             horizontalAlignment = Alignment.End,
             modifier = Modifier.padding(end = 8.dp),
         ) {
-            Text(
-                text = if (item.isDirectory) {
-                    stringResource(R.string.browser_items_count, item.childCount)
-                } else {
-                    Formatter.formatShortFileSize(context, item.size)
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-            )
+            if (tcMeta.showSizeInList) {
+                Text(
+                    text = if (item.isDirectory) {
+                        stringResource(R.string.browser_items_count, item.childCount)
+                    } else {
+                        Formatter.formatShortFileSize(context, item.size)
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
             val dateStr = dateFormatter(item.lastModified)
-            if (dateStr.isNotEmpty()) {
+            if (tcMeta.showDateInList && dateStr.isNotEmpty()) {
                 Text(
                     text = dateStr,
                     style = MaterialTheme.typography.labelSmall,
